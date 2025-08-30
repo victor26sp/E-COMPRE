@@ -1,0 +1,2302 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel - Sistema de Controle de Estoque (v15 Tabelas de Preço)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
+
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- DataTables (Bootstrap 5 + Responsive) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.4/r-3.0.2/datatables.min.css">
+
+  <style>
+    :root{
+      --sidebar-width:280px;
+      --sidebar-collapsed:68px;
+      --rightpanel-width:360px;
+      --btn-gray:#6c757d;
+    }
+    html, body{height:100%}
+    body{overflow:hidden;background:#f5f7fb}
+
+    /* Sidebar (left) */
+    .sidebar{
+      width:var(--sidebar-width);
+      height:100vh;
+      position:fixed;left:0;top:0;
+      background:#0d6efd;
+      color:#fff;
+      padding:1rem .75rem;
+      transition:width .2s ease;
+      z-index:1030;
+      box-shadow:0 0 12px rgba(0,0,0,.08);
+    }
+    .sidebar .brand h4{font-weight:600}
+    .sidebar .nav-link{color:#fff;border-radius:.5rem;padding:.55rem .75rem;margin:.125rem 0}
+    .sidebar .nav-link:hover{background:rgba(255,255,255,.12)}
+    .sidebar .nav-link.active{background:rgba(255,255,255,.22)}
+    .sidebar .brand .toggle-inline{display:flex;gap:.5rem;align-items:center}
+    .sidebar .hide-when-collapsed{transition:opacity .2s ease}
+    .sidebar .brand{margin-bottom:.5rem}
+
+    /* Submenu de Relatórios */
+    .sidebar .nav-item .collapse .nav-link, .sidebar .nav-item .collapsing .nav-link {
+        padding-left: 2.5rem;
+        font-size: 0.9rem;
+        background: rgba(0,0,0,0.1);
+    }
+     .sidebar .nav-item .collapse .nav-link:hover, .sidebar .nav-item .collapsing .nav-link:hover {
+        background: rgba(0,0,0,0.2);
+    }
+
+    /* Content */
+    .content{margin-left:var(--sidebar-width);height:100vh;overflow:auto;padding:1rem 1.25rem;transition:margin-left .2s ease, margin-right .2s ease}
+    .main-area{margin-right:var(--rightpanel-width)}
+
+    /* Right panel */
+    .right-panel{
+      position:fixed;right:0;top:0;
+      width:var(--rightpanel-width);
+      height:100vh;overflow:auto;
+      background:#ffffff;border-left:1px solid #e9ecef;
+      padding:1rem;
+      transition:transform .2s ease;
+      z-index:1029;
+      box-shadow:0 0 12px rgba(0,0,0,.06);
+    }
+
+    .small-muted{font-size:.88rem;color:#6c757d}
+    .report-grid{overflow:auto;max-height:56vh}
+
+    /* Collapsed states */
+    body.collapsed-left .sidebar{width:var(--sidebar-collapsed)}
+    body.collapsed-left .content{margin-left:var(--sidebar-collapsed)}
+    body.collapsed-left .sidebar .hide-when-collapsed{opacity:0;pointer-events:none}
+
+    body.collapsed-right .main-area{margin-right:0}
+    body.collapsed-right .right-panel{transform:translateX(100%)}
+
+    /* Gray icon buttons inside bars */
+    .btn-gray{
+      background:#e9ecef;border:1px solid #ced4da;color:#495057;
+    }
+    .btn-gray:hover{background:#dee2e6;color:#212529}
+
+    /* Tables responsiveness */
+    .table-responsive{overflow-x:auto}
+    table th, table td{vertical-align:middle}
+    #tRelFull tfoot th, #tRelFullSintetico tfoot th, #tRelSaidas tfoot th, #tRelEstoque tfoot th, #tRelEntradas tfoot th, #tRelSaidaIndividual tfoot th {
+        font-weight: 600;
+        background-color: #f8f9fa;
+    }
+
+    /* Toast Notification Area */
+    .toast-container { z-index: 1090; }
+
+    /* Dashboard Cards */
+    .dashboard-card .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+    .dashboard-card .card-title {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+    .dashboard-card .card-text {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #0d6efd;
+    }
+    .dashboard-card .card-text.text-danger {
+        color: #dc3545;
+    }
+    
+    /* Right Panel Hover Trigger */
+    #right-panel-trigger {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 10px;
+        height: 100%;
+        z-index: 1031; /* Above other content but below an open panel */
+        cursor: pointer;
+    }
+
+    /* Smaller screens */
+    @media (max-width: 992px){
+      .main-area{margin-right:0}
+      body:not(.force-right) .right-panel{transform:translateX(100%)}
+    }
+    @media (max-width: 768px){
+      body {
+        --sidebar-width: var(--sidebar-collapsed);
+      }
+      body.sidebar-hover {
+        --sidebar-width: 280px;
+      }
+    }
+    @media (max-width: 576px){
+      :root{ --sidebar-width:240px; --rightpanel-width:320px; }
+      .report-grid{max-height:50vh}
+      .content{padding:.75rem}
+      .sidebar{padding:.75rem}
+      body.sidebar-hover {
+        --sidebar-width: 240px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar d-flex flex-column">
+    <div class="brand d-flex justify-content-between align-items-center">
+      <div class="toggle-inline">
+        <i class="bi bi-boxes"></i>
+        <h4 class="mb-0 hide-when-collapsed">E-COMPRE</h4>
+      </div>
+    </div>
+    <div class="mb-2 small-muted hide-when-collapsed">Navegação</div>
+    <nav class="nav flex-column mb-3" id="menu">
+      <a class="nav-link active" data-tab="dashboard"><i class="bi bi-speedometer2"></i> <span class="hide-when-collapsed">Dashboard</span></a>
+      <a class="nav-link" data-tab="produtos"><i class="bi bi-box-seam"></i> <span class="hide-when-collapsed">Produtos</span></a>
+      <a class="nav-link" data-tab="entrada"><i class="bi bi-box-arrow-in-down"></i> <span class="hide-when-collapsed">Entradas</span></a>
+      <a class="nav-link" data-tab="saida"><i class="bi bi-box-arrow-up"></i> <span class="hide-when-collapsed">Saídas</span></a>
+      <a class="nav-link" data-tab="lojas"><i class="bi bi-shop"></i> <span class="hide-when-collapsed">Lojas</span></a>
+      <a class="nav-link" data-tab="tabelas-preco"><i class="bi bi-tags"></i> <span class="hide-when-collapsed">Tabelas de Preço</span></a>
+      
+      <!-- Menu de Relatórios Sanfonado -->
+      <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="collapse" href="#relatorios-submenu" role="button" aria-expanded="false" aria-controls="relatorios-submenu">
+          <i class="bi bi-journal-text"></i> <span class="hide-when-collapsed">Relatórios <i class="bi bi-chevron-down float-end"></i></span>
+        </a>
+        <div class="collapse" id="relatorios-submenu">
+          <ul class="nav flex-column">
+            <a class="nav-link" data-tab="relatorio-entradas"><i class="bi bi-arrow-down-circle"></i> <span class="hide-when-collapsed">Rel. Entradas</span></a>
+            <a class="nav-link" data-tab="relatorio-saidas"><i class="bi bi-arrow-up-circle"></i> <span class="hide-when-collapsed">Rel. Saídas</span></a>
+            <a class="nav-link" data-tab="relatorio-saida-individual"><i class="bi bi-person-bounding-box"></i> <span class="hide-when-collapsed">Rel. Saída Individual</span></a>
+            <a class="nav-link" data-tab="relatorio-estoque"><i class="bi bi-clipboard-data"></i> <span class="hide-when-collapsed">Rel. Estoque</span></a>
+            <a class="nav-link" data-tab="relatorio-full"><i class="bi bi-table"></i> <span class="hide-when-collapsed">Rel. FULL</span></a>
+          </ul>
+        </div>
+      </li>
+      
+      <a class="nav-link" data-tab="importexport"><i class="bi bi-arrow-left-right"></i> <span class="hide-when-collapsed">Import / Export</span></a>
+    </nav>
+    <div class="mt-auto small-muted hide-when-collapsed">AutoBackup no navegador</div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="content main-area">
+    <!-- Dashboard -->
+    <section id="dashboard" class="tab-page">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+            <h3 class="mb-0">Dashboard</h3>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="form-label mb-0 small">Período:</label>
+                <input type="date" id="dashInicio" class="form-control form-control-sm" style="width: auto;">
+                <input type="date" id="dashFim" class="form-control form-control-sm" style="width: auto;">
+            </div>
+        </div>
+        <div class="row g-4">
+            <!-- Summary Cards -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Produtos</h5>
+                        <p class="card-text" id="totalProdutosCard">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Lojas</h5>
+                        <p class="card-text" id="totalLojasCard">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Valor Saídas (Período)</h5>
+                        <p class="card-text" id="valorSaidasPeriodoCard">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+             <div class="col-sm-6 col-lg-3">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Produtos Estoque Baixo</h5>
+                        <p class="card-text text-danger" id="estoqueBaixoCard">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saídas por Loja -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Saídas por Loja (Valor Total no Período)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="saidasPorLojaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ranking de Produtos -->
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Top 5 Produtos com Mais Saídas (Período)</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="rankingProdutosList">
+                           <li class="list-group-item text-muted">Nenhuma saída registrada no período.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Últimos Movimentos -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Últimos 10 Movimentos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Produto</th>
+                                        <th>Qtde</th>
+                                        <th>Loja</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ultimosMovimentosBody">
+                                    <tr><td colspan="5" class="text-center text-muted">Nenhum movimento registrado.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Produtos -->
+    <section id="produtos" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Produtos</h3>
+        <div class="small-muted">Custo e valor de distribuição por unidade</div>
+      </div>
+      <div class="card mb-3">
+        <div class="card-body">
+          <form id="formProduto" class="row g-2 align-items-end">
+            <div class="col-sm-6 col-md-3 col-lg-2"><label class="form-label">Código</label><input id="pCodigo" class="form-control" required></div>
+            <div class="col-sm-6 col-md-5 col-lg-4"><label class="form-label">Nome</label><input id="pNome" class="form-control" required></div>
+            <div class="col-6 col-md-2"><label class="form-label">Estoque inicial</label><input id="pEstoque" type="number" min="0" class="form-control" value="0"></div>
+            <div class="col-6 col-md-2 col-lg-2"><label class="form-label">Custo (R$)</label><input id="pCusto" type="number" step="0.01" min="0" class="form-control" value="0.00"></div>
+            <div class="col-6 col-md-2 col-lg-2"><label class="form-label">Distrib. (R$)</label><input id="pDist" type="number" step="0.01" min="0" class="form-control" value="0.00"></div>
+            <div class="col-12 mt-2 d-flex flex-wrap gap-2">
+              <button class="btn btn-primary">Salvar produto</button>
+              <button id="btnCancelEditProduto" type="button" class="btn btn-secondary d-none">Cancelar Edição</button>
+              <button id="btnLimparProdutos" type="button" class="btn btn-outline-danger">Limpar todos</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <h5 class="mb-3">Produtos Cadastrados</h5>
+          <div class="table-responsive">
+            <table class="table table-striped table-sm" id="tabelaProdutos" style="width:100%">
+              <thead><tr><th>Código</th><th>Nome</th><th>Estoque</th><th>Custo (R$)</th><th>Distrib. (R$)</th><th style="min-width:120px">Ações</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Entrada -->
+    <section id="entrada" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Registrar Entrada</h3>
+        <div class="small-muted">Não exige loja</div>
+      </div>
+      <div class="card mb-3"><div class="card-body">
+        <form id="formEntrada" class="row g-2 align-items-end">
+          <div class="col-sm-6 col-md-5 col-lg-4"><label class="form-label">Produto</label><select id="eProduto" class="form-select" required></select></div>
+          <div class="col-6 col-md-2"><label class="form-label">Quantidade</label><input id="eQuantidade" type="number" min="1" class="form-control" value="1" required></div>
+          <div class="col-6 col-md-3 col-lg-2"><label class="form-label">Data</label><input id="eData" type="date" class="form-control" required></div>
+          <div class="col-12 col-md-4"><label class="form-label">Observação</label><input id="eObs" class="form-control"></div>
+          <div class="col-12 mt-2 d-flex flex-wrap gap-2">
+            <button class="btn btn-success">Registrar Entrada</button>
+            <button id="btnLimparEntradas" type="button" class="btn btn-outline-danger">Limpar entradas</button>
+          </div>
+        </form>
+      </div></div>
+      <div class="card">
+        <div class="card-body">
+          <h5 class="mb-3">Lançamentos de Entrada</h5>
+          <div class="table-responsive">
+            <table class="table table-striped table-sm" id="tabelaEntradas" style="width:100%">
+              <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Saída -->
+    <section id="saida" class="tab-page d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h3 class="mb-0">Registrar Saída</h3>
+            <div class="small-muted">Selecione a loja e a tabela de preço</div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <form id="formSaida" class="row g-3 align-items-end">
+                    <div class="col-md-6 col-lg-4"><label class="form-label">Produto</label><select id="sProduto" class="form-select" required></select></div>
+                    <div class="col-md-6 col-lg-3"><label class="form-label">Loja</label><select id="sLoja" class="form-select" required></select></div>
+                    <div class="col-md-4 col-lg-3"><label class="form-label">Tabela de Preço</label><select id="sTabelaPreco" class="form-select" required></select></div>
+                    <div class="col-md-4 col-lg-2"><label class="form-label">Quantidade</label><input id="sQuantidade" type="number" min="1" class="form-control" value="1" required></div>
+                    <div class="col-md-4 col-lg-3"><label class="form-label">Data</label><input id="sData" type="date" class="form-control" required></div>
+                    <div class="col-12 col-lg-9"><label class="form-label">Observação</label><input id="sObs" class="form-control"></div>
+                    <div class="col-12 mt-3 d-flex flex-wrap gap-2">
+                        <button class="btn btn-danger">Registrar Saída</button>
+                        <button id="btnLimparSaidas" type="button" class="btn btn-outline-danger">Limpar saídas</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="mb-3">Lançamentos de Saída</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="tabelaSaidas" style="width:100%">
+                        <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Loja</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Lojas -->
+    <section id="lojas" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Cadastro de Lojas</h3>
+      </div>
+      <div class="card mb-3"><div class="card-body">
+        <form id="formLoja" class="row g-2 align-items-end">
+          <div class="col-6 col-md-3"><label class="form-label">Código</label><input id="lCodigo" class="form-control" required></div>
+          <div class="col-6 col-md-5"><label class="form-label">Nome da Loja</label><input id="lNome" class="form-control" required></div>
+          <div class="col-12 col-md-4"><label class="form-label">Responsável</label><input id="lResp" class="form-control"></div>
+          <div class="col-12 mt-2 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary">Salvar Loja</button>
+            <button id="btnLimparLojas" type="button" class="btn btn-outline-danger">Limpar lojas</button>
+          </div>
+        </form>
+      </div></div>
+      <div class="card">
+        <div class="card-body">
+          <h5 class="mb-3">Lojas cadastradas</h5>
+          <div class="table-responsive">
+            <table class="table table-striped table-sm" id="tabelaLojas" style="width:100%">
+              <thead><tr><th>Código</th><th>Nome</th><th>Responsável</th><th style="min-width:100px">Ações</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Tabelas de Preço -->
+    <section id="tabelas-preco" class="tab-page d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h3 class="mb-0">Tabelas de Preço</h3>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0">Edição Manual</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="selectTabelaPreco" class="form-label mb-0 small">Tabela:</label>
+                            <select id="selectTabelaPreco" class="form-select form-select-sm" style="width: auto;">
+                                <!-- Opções serão preenchidas via JS -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                             <table class="table table-sm table-striped" id="tabelaPrecosCustom" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Produto</th>
+                                        <th>Preço Padrão (R$)</th>
+                                        <th>Preço Customizado (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                             </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-end">
+                        <button id="btnSalvarTabelaPreco" class="btn btn-primary">Salvar Tabela</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header"><h5 class="mb-0">Importar Tabela</h5></div>
+                    <div class="card-body">
+                        <p class="small text-muted">Importe um arquivo CSV com os preços customizados. Formato: `codigo;distribuicao`</p>
+                         <form id="formImportPrecos">
+                             <div class="mb-2">
+                                <label for="importSelectTabela" class="form-label">Tabela para atualizar:</label>
+                                <select id="importSelectTabela" class="form-select"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="importPrecosFile" class="form-label">Arquivo CSV:</label>
+                                <input type="file" id="importPrecosFile" class="form-control" accept=".csv">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Importar</button>
+                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Relatório Estoque -->
+    <section id="relatorio-estoque" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Relatório de Estoque Geral</h3>
+        <div class="small-muted">Quantidade por produto / custo / distribuição</div>
+      </div>
+      <div class="card"><div class="card-body report-grid">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <button id="btnExportPdfEst" class="btn btn-outline-primary btn-sm">Exportar PDF (A4 paisagem)</button>
+        </div>
+        <div id="relEstoque"></div>
+      </div></div>
+    </section>
+
+    <!-- Relatório Saídas -->
+    <section id="relatorio-saidas" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Relatório de Saídas (Lojas x Datas)</h3>
+        <div class="d-flex flex-wrap gap-2">
+          <input id="rInicio" type="date" class="form-control">
+          <input id="rFim" type="date" class="form-control">
+          <button id="btnGerarRel" class="btn btn-primary">Gerar</button>
+          <button id="btnExportRel" class="btn btn-outline-secondary">Exportar CSV</button>
+          <button id="btnExportPdfRel" class="btn btn-outline-primary">Exportar PDF (A4 paisagem)</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-body report-grid">
+        <div id="relGrid"></div>
+      </div></div>
+    </section>
+
+    <!-- Relatório Entradas -->
+    <section id="relatorio-entradas" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Relatório de Entradas</h3>
+        <div class="d-flex flex-wrap gap-2">
+          <input id="reInicio" type="date" class="form-control">
+          <input id="reFim" type="date" class="form-control">
+          <button id="btnGerarRelEntradas" class="btn btn-primary">Gerar</button>
+          <button id="btnExportPdfRelEntradas" class="btn btn-outline-primary">Exportar PDF (A4 paisagem)</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-body report-grid">
+        <div id="relEntradasGrid"></div>
+      </div></div>
+    </section>
+
+    <!-- Relatório Saída Individual -->
+    <section id="relatorio-saida-individual" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3 class="mb-0">Relatório de Saída Individual (Resumido)</h3>
+      </div>
+      <div class="d-flex flex-wrap gap-2 align-items-start p-3 bg-light border rounded mb-3">
+          <div class="flex-grow-1" style="min-width: 200px;">
+              <label for="rsiLoja" class="form-label small">Lojas</label>
+              <select id="rsiLoja" class="form-select" multiple style="height: 100px;"></select>
+              <div class="form-text small">Segure Ctrl/Cmd para selecionar várias.</div>
+          </div>
+          <div>
+              <label for="rsiInicio" class="form-label small">Data Início</label>
+              <input id="rsiInicio" type="date" class="form-control">
+          </div>
+          <div>
+              <label for="rsiFim" class="form-label small">Data Fim</label>
+              <input id="rsiFim" type="date" class="form-control">
+          </div>
+          <div class="align-self-end">
+              <button id="btnGerarRelSaidaIndividual" class="btn btn-primary">Gerar</button>
+              <button id="btnExportPdfRelSaidaIndividual" class="btn btn-outline-primary">Exportar PDF</button>
+          </div>
+      </div>
+      <div class="card"><div class="card-body report-grid">
+        <div id="relSaidaIndividualGrid"></div>
+      </div></div>
+    </section>
+
+    <!-- Relatório FULL -->
+    <section id="relatorio-full" class="tab-page d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h3 class="mb-0">Relatório FULL (Estoque por Loja)</h3>
+            <div id="fullReportControls" class="d-flex flex-wrap gap-3 align-items-center">
+                <!-- Tipo de Relatório -->
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="relFullType" id="relFullAnalitico" value="analitico" checked>
+                  <label class="form-check-label" for="relFullAnalitico">Analítico</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="relFullType" id="relFullSintetico" value="sintetico">
+                  <label class="form-check-label" for="relFullSintetico">Sintético</label>
+                </div>
+                <!-- Botões de Ação -->
+                <button id="btnSalvarAlloc" class="btn btn-success btn-sm">Salvar Alocações</button>
+                <button id="btnExportPdfFull" class="btn btn-outline-primary btn-sm">Exportar PDF</button>
+            </div>
+        </div>
+        <div class="alert alert-info" id="fullReportAlert">
+            Digite a quantidade de cada <strong>produto</strong> por <strong>loja</strong>. Use a caixa de busca para filtrar. Valor total usa o preço de <em>distribuição</em>.
+        </div>
+        <div class="card">
+            <div class="card-body report-grid">
+                <div id="relFull"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Import/Export -->
+    <section id="importexport" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3 class="mb-0">Import / Export</h3></div>
+      <div class="card"><div class="card-body d-flex flex-column gap-2">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="autoBackupDownload">
+          <label class="form-check-label" for="autoBackupDownload">Baixar arquivo de backup automaticamente a cada operação</label>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button id="exportJson" class="btn btn-outline-primary">Exportar JSON</button>
+          <button id="exportLastAuto" class="btn btn-outline-secondary">Baixar último AutoBackup</button>
+          <button id="importJsonBtn" class="btn btn-outline-secondary">Importar JSON</button>
+          <input id="fileImport" type="file" accept="application/json" class="form-control" style="display:none">
+        </div>
+        <div class="small text-muted" id="lastAutoInfo"></div>
+      </div></div>
+    </section>
+  </main>
+  
+  <div id="right-panel-trigger"></div>
+
+  <!-- Right panel -->
+  <aside class="right-panel">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Editor Rápido</h5>
+    </div>
+    <hr>
+    <div id="editorArea">
+      <h6>Editar Movimento</h6>
+      <form id="formEdit">
+        <input type="hidden" id="editIndex">
+        <div class="mb-2"><label>Tipo</label><select id="editTipo" class="form-select" disabled><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+        <div class="mb-2"><label>Produto</label><select id="editProduto" class="form-select"></select></div>
+        <div class="mb-2" id="editLojaWrap"><label>Loja (apenas para saída)</label><select id="editLoja" class="form-select"></select></div>
+        <div class="mb-2"><label>Quantidade</label><input id="editQuantidade" type="number" class="form-control" min="1"></div>
+        <div class="mb-2"><label>Data</label><input id="editData" type="date" class="form-control"></div>
+        <div class="mb-2"><label>Observação</label><input id="editObs" class="form-control"></div>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary">Salvar Alterações</button>
+          <button id="btnCancelEdit" type="button" class="btn btn-outline-secondary">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Toast Container (para notificações) -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+  <!-- Modal de Confirmação Genérico -->
+  <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmationModalLabel">Confirmar Ação</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="confirmationModalBody">
+          Você tem certeza que deseja executar esta ação?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Libraries -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/v/bs5/dt-2.0.4/r-3.0.2/datatables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- jsPDF and AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    const { jsPDF } = window.jspdf;
+
+    // ===== Chaves de Armazenamento (Storage Keys) =====
+    const KEY_PRODUCTS = 'estoque_produtos_v13';
+    const KEY_LOJAS = 'estoque_lojas_v13';
+    const KEY_MOVES = 'estoque_movimentos_v13';
+    const KEY_ALLOC = 'estoque_alocacoes_v13';
+    const KEY_AUTOBACK = 'estoque_autobackup_v13';
+    const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
+    const LOW_STOCK_THRESHOLD = 10;
+
+    // ===== Estruturas de Dados =====
+    let produtos = load(KEY_PRODUCTS);
+    let lojas = load(KEY_LOJAS);
+    let movimentos = load(KEY_MOVES);
+    let alocacoes = load(KEY_ALLOC); if(!alocacoes || typeof alocacoes!=='object' || Array.isArray(alocacoes)) alocacoes = {};
+    let priceTables = load(KEY_PRICETABLES); if(!priceTables || typeof priceTables!=='object' || Array.isArray(priceTables)) priceTables = {};
+
+
+    // ===== Elementos da UI e Instâncias =====
+    const menu = document.getElementById('menu');
+    const tabs = document.querySelectorAll('.tab-page');
+    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const dtInstances = {}; // Armazena instâncias do DataTables
+    let saidasPorLojaChart; // Armazena instância do Chart.js
+
+    // Objeto de tradução para a biblioteca DataTables.
+    const dtLang = {
+      sEmptyTable: "Nenhum registro encontrado",
+      sInfo: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+      sInfoEmpty: "Mostrando 0 até 0 de 0 registros",
+      sInfoFiltered: "(Filtrados de _MAX_ registros)",
+      sLengthMenu: "_MENU_ resultados por página",
+      sLoadingRecords: "Carregando...",
+      sProcessing: "Processando...",
+      sZeroRecords: "Nenhum registro encontrado",
+      sSearch: "Buscar",
+      oPaginate: { sNext: "Próximo", sPrevious: "Anterior", sFirst: "Primeiro", sLast: "Último" },
+      oAria: { sSortAscending: ": Ordenar colunas de forma ascendente", sSortDescending: ": Ordenar colunas de forma descendente" }
+    };
+
+    // ===== Função de Inicialização =====
+    document.addEventListener('DOMContentLoaded', function() {
+      bindMenu();
+      bindForms();
+      bindTogglesAndHover();
+      bindTableActions();
+      bindDashboardFilters();
+      bindFullReportControls();
+
+      // Define datas padrão para os filtros
+      const today = new Date().toISOString().slice(0,10);
+      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
+      const past = new Date(); past.setDate(past.getDate()-30); // Padrão de 30 dias
+      ['rInicio', 'dashInicio', 'reInicio', 'rsiInicio'].forEach(id => {
+          const el = document.getElementById(id); if(el) el.value = past.toISOString().slice(0,10);
+      });
+      
+      initializeDataTables();
+      renderAll();
+      clearEdit();
+      updateLastAutoInfo();
+      handleInitialSidebarState();
+    });
+
+    // ===== Navegação do Menu / Abas =====
+    function bindMenu(){
+      menu.querySelectorAll('.nav-link').forEach(a=> a.addEventListener('click', e=>{
+        e.preventDefault();
+        
+        // Lógica para fechar submenu se outro item for clicado
+        if (!a.getAttribute('data-bs-toggle')) {
+            const openSubmenu = document.querySelector('#relatorios-submenu.show');
+            if(openSubmenu) {
+                new bootstrap.Collapse(openSubmenu).hide();
+            }
+        }
+
+        menu.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+        a.classList.add('active');
+        if(a.closest('.collapse')) {
+            const parentToggle = document.querySelector(`[data-bs-target="#${a.closest('.collapse').id}"]`);
+            if(parentToggle) parentToggle.classList.add('active');
+        }
+        showTab(a.dataset.tab);
+      }));
+    }
+    function showTab(id){
+      if (!id) return; // Se clicou no toggle do menu, não faz nada
+      tabs.forEach(t=> t.id===id ? t.classList.remove('d-none') : t.classList.add('d-none'));
+      
+      // Renderiza conteúdo específico da aba quando ela é aberta
+      switch(id) {
+        case 'dashboard': renderDashboard(); break;
+        case 'entrada': renderMovimentosTable('entrada'); break;
+        case 'saida': renderMovimentosTable('saida'); break;
+        case 'tabelas-preco': renderTabelasPreco(); break;
+        case 'relatorio-estoque': renderRelEstoque(); break;
+        case 'relatorio-full': renderRelFull(); break;
+        case 'relatorio-saidas': 
+            const r = document.getElementById('relGrid'); 
+            if(!r.innerHTML.trim()) gerarRelatorio();
+            break;
+        case 'relatorio-entradas':
+            const re = document.getElementById('relEntradasGrid');
+            if(!re.innerHTML.trim()) gerarRelatorioEntrada();
+            break;
+        case 'relatorio-saida-individual':
+            const rsi = document.getElementById('relSaidaIndividualGrid');
+            if(!rsi.innerHTML.trim()) gerarRelatorioSaidaIndividual();
+            break;
+      }
+    }
+    function getActiveTab(){ 
+        const activeLink = menu.querySelector('.nav-link.active');
+        return activeLink ? activeLink.dataset.tab : 'dashboard';
+    }
+
+    // ===== Controles de UI (Toggles, Hover, Responsividade) =====
+    function bindTogglesAndHover(){
+      // Hover para o menu esquerdo
+      const leftSidebar = document.querySelector('.sidebar');
+      leftSidebar.addEventListener('mouseenter', () => {
+          document.body.classList.add('sidebar-hover');
+          document.body.classList.remove('collapsed-left');
+      });
+      leftSidebar.addEventListener('mouseleave', () => {
+          document.body.classList.remove('sidebar-hover');
+          handleInitialSidebarState();
+      });
+      
+      // Hover para o painel direito
+      const rightPanel = document.querySelector('.right-panel');
+      const rightPanelTrigger = document.getElementById('right-panel-trigger');
+
+      rightPanelTrigger.addEventListener('mouseenter', () => {
+          document.body.classList.remove('collapsed-right');
+      });
+      rightPanel.addEventListener('mouseleave', () => {
+          document.body.classList.add('collapsed-right');
+      });
+      
+      // Observador para responsividade
+      new ResizeObserver(handleInitialSidebarState).observe(document.body);
+    }
+
+    function handleInitialSidebarState() {
+        if (document.body.classList.contains('sidebar-hover')) return;
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('collapsed-left');
+        } else {
+            document.body.classList.remove('collapsed-left');
+        }
+    }
+
+
+    // ===== Bind de Formulários, Botões e Filtros =====
+    function bindForms(){
+      document.getElementById('formProduto').addEventListener('submit', e=>{ e.preventDefault(); salvarProduto(); });
+      document.getElementById('btnCancelEditProduto').addEventListener('click', clearFormProduto);
+      document.getElementById('btnLimparProdutos').addEventListener('click', () => {
+        showConfirmationModal('Deseja limpar TODOS os produtos? Isso apagará também os movimentos e alocações relacionadas.', () => {
+          produtos=[]; movimentos=[]; alocacoes={}; priceTables = {};
+          save(KEY_PRODUCTS, produtos); save(KEY_MOVES, movimentos); save(KEY_ALLOC, alocacoes); save(KEY_PRICETABLES, priceTables);
+          renderAll();
+          showToast('Todos os produtos foram removidos.', 'success');
+        });
+      });
+
+      document.getElementById('formLoja').addEventListener('submit', e=>{ e.preventDefault(); salvarLoja(); });
+      document.getElementById('btnLimparLojas').addEventListener('click', () => {
+        showConfirmationModal('Deseja limpar TODAS as lojas? Isso removerá saídas e alocações associadas.', () => {
+          lojas=[]; movimentos = movimentos.filter(m=> m.tipo!=='saida'); alocacoes={};
+          save(KEY_LOJAS, lojas); save(KEY_MOVES, movimentos); save(KEY_ALLOC, alocacoes);
+          renderAll();
+          showToast('Todas as lojas foram removidas.', 'success');
+        });
+      });
+
+      document.getElementById('formEntrada').addEventListener('submit', e=>{ e.preventDefault(); salvarEntrada(); });
+      document.getElementById('btnLimparEntradas').addEventListener('click', () => {
+        showConfirmationModal('Deseja limpar TODOS os lançamentos de entrada?', () => {
+          movimentos = movimentos.filter(m=> m.tipo!=='entrada');
+          save(KEY_MOVES, movimentos); renderAll();
+          showToast('Todas as entradas foram removidas.', 'success');
+        });
+      });
+
+      document.getElementById('formSaida').addEventListener('submit', e=>{ e.preventDefault(); salvarSaida(); });
+      document.getElementById('btnLimparSaidas').addEventListener('click', () => {
+        showConfirmationModal('Deseja limpar TODOS os lançamentos de saída?', () => {
+          movimentos = movimentos.filter(m=> m.tipo!=='saida');
+          save(KEY_MOVES, movimentos); renderAll();
+          showToast('Todas as saídas foram removidas.', 'success');
+        });
+      });
+      
+      document.getElementById('selectTabelaPreco').addEventListener('change', renderTabelasPreco);
+      document.getElementById('btnSalvarTabelaPreco').addEventListener('click', salvarTabelaPreco);
+      document.getElementById('formImportPrecos').addEventListener('submit', importarTabelaPrecoCSV);
+
+      document.getElementById('btnGerarRel').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorio(); });
+      document.getElementById('btnExportRel').addEventListener('click', e=>{ e.preventDefault(); exportarCSV(); });
+      document.getElementById('btnExportPdfRel').addEventListener('click', e=>{ e.preventDefault(); exportarPDFRelatorio(); });
+      document.getElementById('btnExportPdfEst').addEventListener('click', e=>{ e.preventDefault(); exportarPDFEstoque(); });
+      document.getElementById('btnGerarRelEntradas').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorioEntrada(); });
+      document.getElementById('btnExportPdfRelEntradas').addEventListener('click', e=>{ e.preventDefault(); exportarPDFEntrada(); });
+      document.getElementById('btnGerarRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorioSaidaIndividual(); });
+      document.getElementById('btnExportPdfRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); exportarPDFSaidaIndividual(); });
+
+      document.getElementById('btnSalvarAlloc').addEventListener('click', e=>{ e.preventDefault(); salvarAlocacoesFromGrid(); });
+      document.getElementById('btnExportPdfFull').addEventListener('click', e=>{ e.preventDefault(); exportarPDFFull(); });
+
+      document.getElementById('exportJson').addEventListener('click', exportJson);
+      document.getElementById('exportLastAuto').addEventListener('click', baixarUltimoAutoBackup);
+      document.getElementById('importJsonBtn').addEventListener('click', ()=> document.getElementById('fileImport').click());
+      document.getElementById('fileImport').addEventListener('change', importarJson);
+
+      document.getElementById('formEdit').addEventListener('submit', e=>{ e.preventDefault(); salvarEdicao(); });
+      document.getElementById('btnCancelEdit').addEventListener('click', e=>{ e.preventDefault(); clearEdit(); });
+    }
+
+    function bindTableActions() {
+        document.getElementById('tabelaProdutos').addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-action]');
+            if (!button) return;
+            const { action, codigo } = button.dataset;
+            if (action === 'edit') editarProduto(codigo);
+            else if (action === 'delete') excluirProduto(codigo);
+        });
+
+        document.getElementById('tabelaLojas').addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-action]');
+            if (!button) return;
+            if (button.dataset.action === 'delete') excluirLoja(button.dataset.codigo);
+        });
+
+        document.getElementById('tabelaEntradas').addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-action]');
+            if (!button) return;
+            const { action, index } = button.dataset;
+            if (action === 'edit') abrirEditor(index);
+            else if (action === 'delete') excluirMovimento(index);
+        });
+
+        document.getElementById('tabelaSaidas').addEventListener('click', (e) => {
+            const button = e.target.closest('button[data-action]');
+            if (!button) return;
+            const { action, index } = button.dataset;
+            if (action === 'edit') abrirEditor(index);
+            else if (action === 'delete') excluirMovimento(index);
+        });
+    }
+
+    function bindDashboardFilters() {
+        document.getElementById('dashInicio').addEventListener('change', renderDashboard);
+        document.getElementById('dashFim').addEventListener('change', renderDashboard);
+    }
+    
+    function bindFullReportControls() {
+        document.querySelectorAll('input[name="relFullType"]').forEach(radio => {
+            radio.addEventListener('change', renderRelFull);
+        });
+    }
+
+    // ===== Funções Auxiliares de Dados (Storage, Download, Notificações) =====
+    const truncateText = (text, length) => (text && text.length > length) ? text.substring(0, length) + '...' : text;
+
+    function save(key,data){
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+        autoBackup(`save:${key}`);
+      } catch (e) {
+        console.error("Erro ao salvar no localStorage:", e);
+        showToast("Erro ao salvar os dados. O armazenamento pode estar cheio.", "danger");
+      }
+    }
+    function load(key){ try{ return JSON.parse(localStorage.getItem(key))||[] }catch(e){ console.error(`Erro ao carregar ${key}:`, e); return []; } }
+    function buildDataObject(){ return { produtos, lojas, movimentos, alocacoes, priceTables, generatedAt: new Date().toISOString() }; }
+    function downloadBlob(content, mime, filename){
+      const blob=new Blob([content],{type:mime});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showToast(message, type = 'success') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>`;
+        toastContainer.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    }
+
+    function showConfirmationModal(message, callback) {
+        document.getElementById('confirmationModalBody').textContent = message;
+        const confirmBtn = document.getElementById('confirmActionBtn');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        newConfirmBtn.addEventListener('click', () => {
+            callback();
+            confirmationModal.hide();
+        }, { once: true });
+        confirmationModal.show();
+    }
+
+    // ===== AutoBackup =====
+    function autoBackup(trigger=''){
+      const payload = { when: new Date().toISOString(), trigger, data: buildDataObject() };
+      localStorage.setItem(KEY_AUTOBACK, JSON.stringify(payload));
+      updateLastAutoInfo();
+      if(document.getElementById('autoBackupDownload')?.checked){
+        downloadBlob(JSON.stringify(payload.data,null,2), 'application/json', `autobackup_${Date.now()}.json`);
+      }
+    }
+    function baixarUltimoAutoBackup(){
+      const raw = localStorage.getItem(KEY_AUTOBACK);
+      if(!raw){ showToast('Nenhum AutoBackup encontrado.', 'warning'); return; }
+      const payload = JSON.parse(raw);
+      downloadBlob(JSON.stringify(payload.data,null,2), 'application/json', `autobackup_${new Date(payload.when).toISOString().slice(0,10)}.json`);
+    }
+    function updateLastAutoInfo(){
+      const info = document.getElementById('lastAutoInfo'); if(!info) return;
+      const raw = localStorage.getItem(KEY_AUTOBACK);
+      if(!raw){ info.textContent = 'AutoBackup: ainda não gerado.'; return; }
+      try{
+        const p = JSON.parse(raw);
+        info.textContent = `Último AutoBackup: ${new Date(p.when).toLocaleString()} (trigger: ${p.trigger||'desconhecido'})`;
+      }catch{ info.textContent = 'AutoBackup inválido.'; }
+    }
+
+    // ===== CRUD e Lógicas de Negócio =====
+    // Produtos
+    function salvarProduto(){
+      const codigo = document.getElementById('pCodigo').value.trim();
+      const nome = document.getElementById('pNome').value.trim();
+      const estoque = Number(document.getElementById('pEstoque').value);
+      const custo = Number(document.getElementById('pCusto').value);
+      const dist = Number(document.getElementById('pDist').value);
+      if(!codigo||!nome||isNaN(estoque)||estoque<0||isNaN(custo)||custo<0||isNaN(dist)||dist<0){ showToast('Preencha todos os campos corretamente.', 'danger'); return; }
+      
+      const isEditing = document.getElementById('pCodigo').disabled;
+      const idx = produtos.findIndex(p=> p.codigo===codigo);
+
+      if(isEditing) {
+          if(idx >= 0) {
+              produtos[idx].nome=nome; 
+              produtos[idx].custo=custo; 
+              produtos[idx].dist=dist; 
+              produtos[idx].estoque_inicial = estoque; // Atualiza diretamente o estoque inicial
+          }
+      } else {
+          if(idx >= 0) { showToast('Já existe um produto com este código.', 'danger'); return; }
+          produtos.push({ codigo, nome, estoque_inicial: estoque, custo, dist });
+      }
+
+      save(KEY_PRODUCTS, produtos); 
+      renderAll(); 
+      clearFormProduto();
+      showToast(`Produto ${isEditing ? 'atualizado' : 'salvo'} com sucesso!`, 'success');
+    }
+    function clearFormProduto(){ 
+        document.getElementById('formProduto').reset();
+        document.getElementById('pCusto').value = '0.00';
+        document.getElementById('pDist').value = '0.00';
+        document.getElementById('pEstoque').value = '0';
+        document.getElementById('pCodigo').disabled=false; 
+        document.getElementById('btnCancelEditProduto').classList.add('d-none');
+    }
+    function calculaEstoqueProduto(codigo){
+      const p = produtos.find(x=>x.codigo===codigo); if(!p) return 0;
+      let estoque = Number(p.estoque_inicial||0);
+      movimentos.forEach(m=>{ if(m.produto===codigo){ if(m.tipo==='entrada') estoque += m.quantidade; else if(m.tipo==='saida') estoque -= m.quantidade; } });
+      return estoque;
+    }
+    function calculaMovimentosProduto(codigo) {
+        let totalEntradas = 0;
+        let totalSaidas = 0;
+        movimentos.forEach(m => {
+            if (m.produto === codigo) {
+                if (m.tipo === 'entrada') {
+                    totalEntradas += m.quantidade;
+                } else if (m.tipo === 'saida') {
+                    totalSaidas += m.quantidade;
+                }
+            }
+        });
+        return { entradas: totalEntradas, saidas: totalSaidas };
+    }
+    function editarProduto(cod){
+      const p = produtos.find(x=>x.codigo===cod); if(!p) return;
+      document.getElementById('pCodigo').value=p.codigo; document.getElementById('pCodigo').disabled=true;
+      document.getElementById('pNome').value=p.nome;
+      document.getElementById('pEstoque').value = p.estoque_inicial||0;
+      document.getElementById('pCusto').value = (p.custo||0).toFixed(2);
+      document.getElementById('pDist').value = (p.dist||0).toFixed(2);
+      document.getElementById('btnCancelEditProduto').classList.remove('d-none');
+      showTab('produtos');
+      document.getElementById('pNome').focus();
+    }
+    function excluirProduto(cod){
+      showConfirmationModal('Excluir este produto e todos os seus movimentos?', () => {
+        produtos = produtos.filter(p=>p.codigo!==cod);
+        movimentos = movimentos.filter(m=> m.produto!==cod);
+        Object.keys(alocacoes).forEach(loja=>{ if(alocacoes[loja] && alocacoes[loja][cod]!==undefined) delete alocacoes[loja][cod]; });
+        Object.keys(priceTables).forEach(table=>{ if(priceTables[table] && priceTables[table][cod]!==undefined) delete priceTables[table][cod]; });
+        save(KEY_PRODUCTS, produtos); save(KEY_MOVES, movimentos); save(KEY_ALLOC, alocacoes); save(KEY_PRICETABLES, priceTables);
+        renderAll();
+        showToast('Produto excluído.', 'success');
+      });
+    }
+
+    // Lojas
+    function salvarLoja(){
+      const codigo=document.getElementById('lCodigo').value.trim();
+      const nome=document.getElementById('lNome').value.trim();
+      const resp=document.getElementById('lResp').value.trim();
+      if(!codigo||!nome){ showToast('Preencha código e nome', 'danger'); return; }
+      
+      const idx=lojas.findIndex(l=>l.codigo===codigo);
+      if(idx>=0){ lojas[idx].nome=nome; lojas[idx].responsavel=resp; }
+      else lojas.push({codigo,nome,responsavel:resp});
+      
+      save(KEY_LOJAS, lojas);
+      renderAll();
+      clearFormLoja();
+      showToast('Loja salva com sucesso!', 'success');
+    }
+    function clearFormLoja(){ document.getElementById('formLoja').reset(); }
+    function excluirLoja(cod){
+      showConfirmationModal('Excluir esta loja e remover saídas/alocações associadas?', () => {
+        lojas = lojas.filter(l=>l.codigo!==cod);
+        movimentos = movimentos.filter(m=> !(m.tipo==='saida' && m.loja===cod));
+        if(alocacoes[cod]) delete alocacoes[cod];
+        save(KEY_LOJAS, lojas); save(KEY_MOVES, movimentos); save(KEY_ALLOC, alocacoes);
+        renderAll();
+        showToast('Loja excluída.', 'success');
+      });
+    }
+
+    // Movimentos
+    function salvarEntrada(){
+      const produto=document.getElementById('eProduto').value;
+      const quantidade=Number(document.getElementById('eQuantidade').value);
+      const data=document.getElementById('eData').value;
+      const obs=document.getElementById('eObs').value.trim();
+      if(!produto||quantidade<=0||!data){ showToast('Preencha os campos corretamente.', 'danger'); return; }
+      movimentos.push({tipo:'entrada', produto, quantidade, data, obs});
+      save(KEY_MOVES, movimentos); renderAll(); clearFormEntrada();
+      showToast('Entrada registrada.', 'success');
+    }
+    function clearFormEntrada(){ document.getElementById('formEntrada').reset(); document.getElementById('eData').value=new Date().toISOString().slice(0,10); }
+
+    function salvarSaida(){
+      const produto=document.getElementById('sProduto').value;
+      const loja=document.getElementById('sLoja').value;
+      const quantidade=Number(document.getElementById('sQuantidade').value);
+      const data=document.getElementById('sData').value;
+      const obs=document.getElementById('sObs').value.trim();
+      const tabelaPreco = document.getElementById('sTabelaPreco').value;
+
+      if(!produto||!loja||quantidade<=0||!data||!tabelaPreco){ showToast('Preencha todos os campos corretamente.', 'danger'); return; }
+      
+      const estoque=calculaEstoqueProduto(produto);
+      const proceed = () => {
+        movimentos.push({tipo:'saida', produto, quantidade, data, loja, obs, tabelaPreco});
+        save(KEY_MOVES, movimentos); renderAll(); clearFormSaida();
+        showToast('Saída registrada.', 'success');
+      };
+
+      if(estoque<quantidade){ 
+        showConfirmationModal(`Estoque (${estoque}) é menor que a saída (${quantidade}). Deseja confirmar mesmo assim?`, proceed);
+      } else {
+        proceed();
+      }
+    }
+    function clearFormSaida(){ document.getElementById('formSaida').reset(); document.getElementById('sData').value=new Date().toISOString().slice(0,10); }
+
+    function excluirMovimento(index) {
+        showConfirmationModal('Deseja realmente excluir este lançamento?', () => {
+            movimentos.splice(index, 1);
+            save(KEY_MOVES, movimentos);
+            renderAll();
+            showToast('Lançamento excluído com sucesso.', 'success');
+        });
+    }
+
+    // Edição Rápida
+    function abrirEditor(idx){
+      const m=movimentos[idx]; if(!m) { showToast('Movimento não encontrado', 'danger'); return; }
+      document.getElementById('editIndex').value=idx; document.getElementById('editTipo').value=m.tipo;
+      preencherSelectsProdutos(); document.getElementById('editProduto').value=m.produto;
+      preencherSelectsLojas();
+      if(m.tipo==='saida'){ document.getElementById('editLojaWrap').style.display='block'; document.getElementById('editLoja').value=m.loja||''; }
+      else { document.getElementById('editLojaWrap').style.display='none'; document.getElementById('editLoja').value=''; }
+      document.getElementById('editQuantidade').value=m.quantidade; document.getElementById('editData').value=m.data; document.getElementById('editObs').value=m.obs||'';
+      
+      document.body.classList.remove('collapsed-right');
+    }
+    function clearEdit(){ document.getElementById('formEdit').reset(); document.getElementById('editIndex').value=''; document.getElementById('editData').value=new Date().toISOString().slice(0,10); document.getElementById('editLojaWrap').style.display='block'; }
+    function salvarEdicao(){
+      const idx=Number(document.getElementById('editIndex').value); if(isNaN(idx) || idx < 0 || idx >= movimentos.length) { showToast('Nenhum movimento selecionado', 'danger'); return; }
+      const tipo=document.getElementById('editTipo').value; const produto=document.getElementById('editProduto').value; const loja=document.getElementById('editLoja').value;
+      const quantidade=Number(document.getElementById('editQuantidade').value); const data=document.getElementById('editData').value; const obs=document.getElementById('editObs').value.trim();
+      if(!produto||quantidade<=0||!data||(tipo==='saida'&&!loja)){ showToast('Preencha os campos corretamente', 'danger'); return; }
+      movimentos[idx].produto = produto;
+      movimentos[idx].quantidade = quantidade;
+      movimentos[idx].data = data;
+      movimentos[idx].obs = obs;
+      if(tipo==='saida') movimentos[idx].loja = loja;
+      save(KEY_MOVES, movimentos); renderAll(); clearEdit(); showToast('Movimento atualizado', 'success');
+    }
+
+    // ===== Renderização e Relatórios =====
+    // Selects
+    function preencherSelectsLojas(){
+      ['sLoja','editLoja', 'rsiLoja'].forEach(id=>{ 
+          const sel=document.getElementById(id); 
+          if(!sel) return; 
+          
+          const isMulti = sel.multiple;
+          const selectedValues = isMulti ? [...sel.selectedOptions].map(o => o.value) : [sel.value];
+
+          sel.innerHTML = ''; // Clear all options
+
+          if (!isMulti) {
+            sel.innerHTML = '<option value="">-- Selecione a Loja --</option>'; 
+          }
+          
+          lojas.forEach(l=>{ 
+              const opt=document.createElement('option'); 
+              opt.value=l.codigo; 
+              opt.textContent=`${l.codigo} - ${l.nome}`; 
+              sel.appendChild(opt); 
+          }); 
+          
+          if (isMulti) {
+              [...sel.options].forEach(opt => {
+                  if (selectedValues.includes(opt.value)) {
+                      opt.selected = true;
+                  }
+              });
+          } else {
+              if (selectedValues[0]) {
+                  sel.value = selectedValues[0];
+              }
+          }
+      });
+    }
+    function preencherSelectsProdutos(){
+      ['eProduto','sProduto','editProduto'].forEach(id=>{ const sel=document.getElementById(id); if(!sel) return; const old=sel.value; sel.innerHTML='<option value="">-- Selecione --</option>'; produtos.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.codigo; opt.textContent=`${p.codigo} - ${p.nome}`; sel.appendChild(opt); }); if(old) sel.value=old; });
+    }
+    function preencherSelectsTabelaPreco() {
+        const selects = ['sTabelaPreco', 'selectTabelaPreco', 'importSelectTabela'];
+        const tabelas = ['empresa', 'drop']; // Adicione mais tabelas customizadas aqui
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            const oldValue = select.value;
+            select.innerHTML = '';
+            tabelas.forEach(tabela => {
+                const opt = document.createElement('option');
+                opt.value = tabela;
+                if (tabela === 'empresa') opt.textContent = 'Empresa (Padrão)';
+                else opt.textContent = tabela.charAt(0).toUpperCase() + tabela.slice(1);
+                select.appendChild(opt);
+            });
+            if (oldValue) select.value = oldValue;
+        });
+    }
+    
+    // Tabela de Movimentos (Entrada/Saída)
+    function renderMovimentosTable(type) {
+        const instanceName = type === 'entrada' ? 'entradas' : 'saidas';
+
+        const movimentosFiltrados = movimentos.map((m, index) => ({...m, originalIndex: index}))
+                                             .filter(m => m.tipo === type)
+                                             .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+        const data = movimentosFiltrados.map(m => {
+            const prod = produtos.find(p => p.codigo === m.produto);
+            const loja = lojas.find(l => l.codigo === m.loja);
+            const baseData = {
+                data: new Date(m.data + 'T12:00:00').toLocaleDateString(),
+                codigo: prod ? prod.codigo : '-',
+                produto: prod ? prod.nome : `[${m.produto}]`,
+                quantidade: m.quantidade,
+                obs: m.obs || '',
+                acoes: `<div class="d-flex gap-1">
+                          <button class='btn btn-sm btn-outline-primary' data-index='${m.originalIndex}' data-action='edit'>Editar</button>
+                          <button class='btn btn-sm btn-outline-danger' data-index='${m.originalIndex}' data-action='delete'>Excluir</button>
+                      </div>`
+            };
+            if (type === 'saida') {
+                baseData.loja = loja ? loja.nome : `[${m.loja}]`;
+            }
+            return baseData;
+        });
+
+        updateDataTable(dtInstances[instanceName], data);
+    }
+
+
+    // Dashboard
+    function renderDashboard() {
+        const inicio = document.getElementById('dashInicio').value;
+        const fim = document.getElementById('dashFim').value;
+        
+        // Cards
+        document.getElementById('totalProdutosCard').textContent = produtos.length;
+        document.getElementById('totalLojasCard').textContent = lojas.length;
+        
+        const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
+        document.getElementById('estoqueBaixoCard').textContent = produtosBaixoEstoque.length;
+
+        const saidasFiltradas = movimentos.filter(m => m.tipo === 'saida' && m.data >= inicio && m.data <= fim);
+        const valorTotalSaidas = saidasFiltradas.reduce((acc, s) => {
+            return acc + (s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco));
+        }, 0);
+        document.getElementById('valorSaidasPeriodoCard').textContent = valorTotalSaidas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+
+        // Gráfico Saídas por Loja
+        const saidasPorLoja = lojas.map(loja => {
+            const valor = saidasFiltradas
+                .filter(s => s.loja === loja.codigo)
+                .reduce((acc, s) => acc + (s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco)), 0);
+            return { nome: loja.nome, valor };
+        });
+
+        const ctx = document.getElementById('saidasPorLojaChart').getContext('2d');
+        if (saidasPorLojaChart) {
+            saidasPorLojaChart.destroy();
+        }
+        saidasPorLojaChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: saidasPorLoja.map(l => l.nome),
+                datasets: [{
+                    label: 'Valor Total de Saídas (R$)',
+                    data: saidasPorLoja.map(l => l.valor),
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Ranking de Produtos
+        const ranking = {};
+        saidasFiltradas.forEach(s => {
+            ranking[s.produto] = (ranking[s.produto] || 0) + s.quantidade;
+        });
+        const sortedRanking = Object.entries(ranking).sort(([,a],[,b]) => b-a).slice(0, 5);
+        
+        const rankingList = document.getElementById('rankingProdutosList');
+        rankingList.innerHTML = '';
+        if (sortedRanking.length === 0) {
+            rankingList.innerHTML = '<li class="list-group-item text-muted">Nenhuma saída registrada no período.</li>';
+        } else {
+            sortedRanking.forEach(([codigo, qtde]) => {
+                const prod = produtos.find(p => p.codigo === codigo);
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.textContent = prod ? `${prod.codigo} - ${truncateText(prod.nome, 25)}` : `[${codigo}]`;
+                li.innerHTML += `<span class="badge bg-primary rounded-pill">${qtde}</span>`;
+                rankingList.appendChild(li);
+            });
+        }
+
+        // Últimos Movimentos
+        const ultimosMovimentosBody = document.getElementById('ultimosMovimentosBody');
+        ultimosMovimentosBody.innerHTML = '';
+        const ultimos = [...movimentos].sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 10);
+
+        if (ultimos.length === 0) {
+            ultimosMovimentosBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum movimento registrado.</td></tr>';
+        } else {
+            ultimos.forEach(m => {
+                const prod = produtos.find(p => p.codigo === m.produto);
+                const loja = m.tipo === 'saida' ? lojas.find(l => l.codigo === m.loja) : null;
+                const tr = document.createElement('tr');
+                const tipoBadge = m.tipo === 'entrada' 
+                    ? `<span class="badge bg-success">Entrada</span>` 
+                    : `<span class="badge bg-danger">Saída</span>`;
+
+                tr.innerHTML = `
+                    <td>${new Date(m.data + 'T12:00:00').toLocaleDateString()}</td>
+                    <td>${tipoBadge}</td>
+                    <td>${prod ? truncateText(prod.nome, 30) : `[${m.produto}]`}</td>
+                    <td>${m.quantidade}</td>
+                    <td>${loja ? loja.nome : '-'}</td>
+                `;
+                ultimosMovimentosBody.appendChild(tr);
+            });
+        }
+    }
+
+
+    // Relatórios
+    function gerarRelatorio(){
+      const inicio=document.getElementById('rInicio').value; const fim=document.getElementById('rFim').value;
+      if(!inicio||!fim){ showToast('Selecione o intervalo de datas.', 'warning'); return; }
+      if(inicio>fim){ showToast('A data inicial não pode ser maior que a data final.', 'warning'); return; }
+      
+      const saidas = movimentos.filter(m=> m.tipo==='saida' && m.data>=inicio && m.data<=fim);
+      const dates = []; let d=new Date(inicio); const end=new Date(fim);
+      while(d<=end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+      const cols = lojas.length>0? lojas : [{codigo:'', nome:'Sem Loja'}];
+      const grid = {}; dates.forEach(dt=> grid[dt]={});
+      const columnTotals = new Array(cols.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
+      let grandTotalValor = 0;
+
+      saidas.forEach(s=>{
+        const dt=s.data; const loja=s.loja||'';
+        grid[dt][loja] = grid[dt][loja] || {qtde:0, valor:0};
+        grid[dt][loja].qtde += s.quantidade;
+        const valorSaida = s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco);
+        grid[dt][loja].valor += valorSaida;
+
+        const colIndex = cols.findIndex(c => c.codigo === loja);
+        if (colIndex !== -1) {
+            columnTotals[colIndex].qtde += s.quantidade;
+            columnTotals[colIndex].valor += valorSaida;
+        }
+      });
+
+      const table = document.createElement('table'); table.id='tRelSaidas'; table.className='table table-bordered table-striped table-sm w-100';
+      const thead = table.createTHead(); const trh = thead.insertRow();
+      trh.innerHTML = '<th>Data</th>'+cols.map(c=>`<th>${c.nome}</th>`).join('')+'<th>Total Dia (R$)</th>';
+      
+      const tb = table.createTBody();
+      dates.forEach(dt=>{
+        const tr = tb.insertRow(); let totalDia=0;
+        tr.insertCell().textContent = new Date(dt+'T12:00:00').toLocaleDateString();
+        cols.forEach(c=>{
+          const cell = grid[dt][c.codigo] || null; const qt=cell?cell.qtde:0; const vl=cell?cell.valor:0;
+          totalDia+=vl; tr.insertCell().innerHTML = `${qt} / R$ ${vl.toFixed(2)}`;
+        });
+        tr.insertCell().textContent = `R$ ${totalDia.toFixed(2)}`;
+        grandTotalValor += totalDia;
+      });
+
+      const tfoot = table.createTFoot();
+      const trf = tfoot.insertRow();
+      trf.insertCell().outerHTML = '<th>TOTAIS</th>';
+      columnTotals.forEach(total => {
+          const th = document.createElement('th');
+          th.innerHTML = `${total.qtde}<br><small>R$ ${total.valor.toFixed(2)}</small>`;
+          trf.appendChild(th);
+      });
+      trf.insertCell().outerHTML = `<th>R$ ${grandTotalValor.toFixed(2)}</th>`;
+
+      const container=document.getElementById('relGrid'); container.innerHTML=''; container.appendChild(table);
+      if(dtInstances.relSaidas) dtInstances.relSaidas.destroy();
+      dtInstances.relSaidas = new DataTable('#tRelSaidas', { paging:false, searching:false, info:false, ordering:false, responsive:true, language: dtLang });
+    }
+    function exportarCSV(){
+      const rel = document.querySelector('#tRelSaidas'); if(!rel){ showToast('Gere o relatório antes de exportar.', 'warning'); return; }
+      const rows = rel.querySelectorAll('tr'); let csv=[];
+      rows.forEach(r=>{ const cols=r.querySelectorAll('th,td'); let row=[]; cols.forEach(c=> row.push(`"${c.innerText.replace(/"/g,'""')}"`)); csv.push(row.join(',')); });
+      downloadBlob(csv.join('\n'), 'text/csv', 'relatorio_saidas.csv');
+    }
+    function exportarPDFRelatorio(){
+      const inicio=document.getElementById('rInicio').value; const fim=document.getElementById('rFim').value;
+      if(!inicio||!fim){ showToast('Selecione o intervalo de datas.', 'warning'); return; }
+      if(inicio>fim){ showToast('Intervalo de datas inválido.', 'warning'); return; }
+      
+      const saidas = movimentos.filter(m=> m.tipo==='saida' && m.data>=inicio && m.data<=fim);
+      const dates = []; let d=new Date(inicio); const end=new Date(fim);
+      while(d<=end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+      const cols = lojas.length>0? lojas : [{codigo:'', nome:'Sem Loja'}];
+      const grid = {}; dates.forEach(dt=> grid[dt]={});
+      const columnTotals = new Array(cols.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
+      let grandTotalValor = 0;
+
+      saidas.forEach(s=>{
+        const dt=s.data; const loja=s.loja||'';
+        grid[dt][loja] = grid[dt][loja] || {qtde:0, valor:0};
+        grid[dt][loja].qtde += s.quantidade;
+        const valorSaida = s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco);
+        grid[dt][loja].valor += valorSaida;
+        const colIndex = cols.findIndex(c => c.codigo === loja);
+        if (colIndex !== -1) {
+            columnTotals[colIndex].qtde += s.quantidade;
+            columnTotals[colIndex].valor += valorSaida;
+        }
+      });
+
+      const head = [['Data', ...cols.map(c=>c.nome), 'Total Dia (R$)']];
+      const body = dates.map(dt=>{ 
+          const row = [new Date(dt+'T12:00:00').toLocaleDateString()]; 
+          let totalDia = 0; 
+          cols.forEach(c=>{ 
+              const cell = grid[dt][c.codigo] || null; 
+              const qt = cell? cell.qtde : 0; 
+              const vl = cell? cell.valor : 0; 
+              totalDia += vl; 
+              row.push(`${qt} / R$ ${vl.toFixed(2)}`); 
+          }); 
+          row.push(`R$ ${totalDia.toFixed(2)}`);
+          grandTotalValor += totalDia;
+          return row; 
+      });
+
+      const footer = [['TOTAIS', ...columnTotals.map(t => `${t.qtde}\n(R$ ${t.valor.toFixed(2)})`), `R$ ${grandTotalValor.toFixed(2)}`]];
+
+      const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+      const title = `Relatório de Saídas (${new Date(inicio+'T12:00:00').toLocaleDateString()} a ${new Date(fim+'T12:00:00').toLocaleDateString()})`; 
+      doc.setFontSize(14); 
+      doc.text(title, 40, 40);
+      doc.autoTable({ 
+          startY: 60, 
+          head: head, 
+          body: body, 
+          foot: footer,
+          styles:{fontSize:8, cellPadding:4, halign: 'center'}, 
+          headStyles:{fillColor:[13,110,253], textColor:255, fontStyle: 'bold'},
+          footStyles:{fillColor:[233, 236, 239], textColor:0, fontStyle: 'bold'},
+          margin:{left:20,right:20} 
+      });
+      doc.save(`relatorio_saidas_${inicio}_a_${fim}.pdf`);
+    }
+
+    function renderRelEstoque(){
+      const container=document.getElementById('relEstoque'); container.innerHTML='';
+      if(produtos.length===0){ container.textContent='Nenhum produto cadastrado.'; return; }
+      const table=document.createElement('table'); table.className='table table-bordered table-striped table-sm w-100'; table.id='tRelEstoque';
+      const thead=table.createTHead(); const trh=thead.insertRow();
+      ['Código','Produto','Total Entradas','Total Saídas','Estoque Atual','Custo Unit (R$)','Valor Custo Total (R$)','Distrib. Unit (R$)','Valor Dist Total (R$)'].forEach(h=>{ let th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+      
+      const tb=table.createTBody();
+      let totalEntradas = 0, totalSaidas = 0, totalEstoque = 0, totalCusto = 0, totalDist = 0;
+      produtos.forEach(p=>{
+        const est=calculaEstoqueProduto(p.codigo);
+        const movs = calculaMovimentosProduto(p.codigo);
+        const custoUnit = Number(p.custo||0); const distUnit = Number(p.dist||0);
+        const custoTotal = custoUnit * est; const distTotal = distUnit * est;
+        const tr=tb.insertRow();
+        tr.insertCell().textContent = p.codigo;
+        tr.insertCell().textContent = p.nome;
+        tr.insertCell().textContent = movs.entradas;
+        tr.insertCell().textContent = movs.saidas;
+        tr.insertCell().textContent = est;
+        tr.insertCell().textContent = custoUnit.toFixed(2);
+        tr.insertCell().textContent = custoTotal.toFixed(2);
+        tr.insertCell().textContent = distUnit.toFixed(2);
+        tr.insertCell().textContent = distTotal.toFixed(2);
+        totalEntradas += movs.entradas;
+        totalSaidas += movs.saidas;
+        totalEstoque += est;
+        totalCusto += custoTotal;
+        totalDist += distTotal;
+      });
+
+      const tfoot = table.createTFoot();
+      const trf = tfoot.insertRow();
+      trf.innerHTML = `<th colspan="2">TOTAIS</th>
+                       <th>${totalEntradas}</th>
+                       <th>${totalSaidas}</th>
+                       <th>${totalEstoque}</th>
+                       <th></th>
+                       <th>R$ ${totalCusto.toFixed(2)}</th>
+                       <th></th>
+                       <th>R$ ${totalDist.toFixed(2)}</th>`;
+
+      container.appendChild(table);
+      if(dtInstances.relEstoque) dtInstances.relEstoque.destroy();
+      dtInstances.relEstoque = new DataTable('#tRelEstoque', { responsive:true, language: dtLang, paging: false, searching: false, info: false });
+    }
+    function exportarPDFEstoque(){
+      if(produtos.length===0){ showToast('Nenhum produto cadastrado.', 'warning'); return; }
+      const head = [['Código','Produto','Entradas','Saídas','Estoque','Custo Unit (R$)','Custo Total (R$)','Distrib. Unit (R$)','Distrib. Total (R$)']];
+      let totalEntradas = 0, totalSaidas = 0, totalEstoque = 0, totalCusto = 0, totalDist = 0;
+      const body = produtos.map(p=>{
+        const est = calculaEstoqueProduto(p.codigo);
+        const movs = calculaMovimentosProduto(p.codigo);
+        const custoUnit = Number(p.custo||0);
+        const distUnit = Number(p.dist||0);
+        const custoTotal = custoUnit * est;
+        const distTotal = distUnit * est;
+        totalEntradas += movs.entradas;
+        totalSaidas += movs.saidas;
+        totalEstoque += est;
+        totalCusto += custoTotal;
+        totalDist += distTotal;
+        return [p.codigo, truncateText(p.nome, 25), movs.entradas, movs.saidas, est, custoUnit.toFixed(2), custoTotal.toFixed(2), distUnit.toFixed(2), distTotal.toFixed(2)];
+      });
+      const footer = [['TOTAIS', '', totalEntradas, totalSaidas, totalEstoque, '', `R$ ${totalCusto.toFixed(2)}`, '', `R$ ${totalDist.toFixed(2)}`]];
+
+      const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+      doc.setFontSize(14);
+      doc.text('Relatório de Estoque Geral', 40, 40);
+      doc.autoTable({ 
+        startY:60, 
+        head:head, 
+        body, 
+        foot: footer,
+        styles:{fontSize:8, cellPadding:4}, 
+        headStyles:{fillColor:[13,110,253], textColor:255, fontStyle: 'bold'},
+        footStyles:{fillColor:[233, 236, 239], textColor:0, fontStyle: 'bold'},
+        margin:{left:20,right:20} 
+      });
+      doc.save('relatorio_estoque.pdf');
+    }
+
+    // ===== Relatório de Entradas (NOVO) =====
+    function gerarRelatorioEntrada() {
+        const inicio = document.getElementById('reInicio').value;
+        const fim = document.getElementById('reFim').value;
+        if (!inicio || !fim) { showToast('Selecione o intervalo de datas.', 'warning'); return; }
+        if (inicio > fim) { showToast('A data inicial não pode ser maior que a data final.', 'warning'); return; }
+
+        const entradas = movimentos.filter(m => m.tipo === 'entrada' && m.data >= inicio && m.data <= fim)
+                                    .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+        const container = document.getElementById('relEntradasGrid');
+        container.innerHTML = '';
+        if (entradas.length === 0) {
+            container.textContent = 'Nenhuma entrada encontrada no período.';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.id = 'tRelEntradas';
+        table.className = 'table table-bordered table-striped table-sm w-100';
+        
+        const thead = table.createTHead();
+        thead.insertRow().innerHTML = '<th>Data</th><th>Código</th><th>Produto</th><th>Qtde</th><th>Valor Custo (R$)</th><th>Valor Distrib. (R$)</th><th>Observação</th>';
+        
+        const tbody = table.createTBody();
+        let totalQuantidade = 0, totalCusto = 0, totalDist = 0;
+        entradas.forEach(e => {
+            const prod = produtos.find(p => p.codigo === e.produto);
+            const valorCusto = e.quantidade * (prod?.custo || 0);
+            const valorDist = e.quantidade * (prod?.dist || 0);
+            const tr = tbody.insertRow();
+            tr.insertCell().textContent = new Date(e.data + 'T12:00:00').toLocaleDateString();
+            tr.insertCell().textContent = prod ? prod.codigo : '-';
+            tr.insertCell().textContent = prod ? prod.nome : `[${e.produto}]`;
+            tr.insertCell().textContent = e.quantidade;
+            tr.insertCell().textContent = valorCusto.toFixed(2);
+            tr.insertCell().textContent = valorDist.toFixed(2);
+            tr.insertCell().textContent = e.obs || '';
+            totalQuantidade += e.quantidade;
+            totalCusto += valorCusto;
+            totalDist += valorDist;
+        });
+
+        const tfoot = table.createTFoot();
+        tfoot.insertRow().innerHTML = `<th colspan="3">TOTAL</th><th>${totalQuantidade}</th><th>${totalCusto.toFixed(2)}</th><th>${totalDist.toFixed(2)}</th><th></th>`;
+
+        container.appendChild(table);
+        if (dtInstances.relEntradas) dtInstances.relEntradas.destroy();
+        dtInstances.relEntradas = new DataTable('#tRelEntradas', { responsive: true, language: dtLang, pageLength: 10, lengthMenu: [10, 25, 50] });
+    }
+
+    function exportarPDFEntrada() {
+        const inicio = document.getElementById('reInicio').value;
+        const fim = document.getElementById('reFim').value;
+        if (!inicio || !fim || inicio > fim) { showToast('Selecione um intervalo de datas válido.', 'warning'); return; }
+
+        const entradas = movimentos.filter(m => m.tipo === 'entrada' && m.data >= inicio && m.data <= fim)
+                                    .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+        if (entradas.length === 0) { showToast('Nenhuma entrada para exportar.', 'info'); return; }
+
+        const head = [['Data', 'Código', 'Produto', 'Qtde', 'Valor Custo (R$)', 'Valor Distrib. (R$)', 'Observação']];
+        let totalQuantidade = 0, totalCusto = 0, totalDist = 0;
+        const body = entradas.map(e => {
+            const prod = produtos.find(p => p.codigo === e.produto);
+            const valorCusto = e.quantidade * (prod?.custo || 0);
+            const valorDist = e.quantidade * (prod?.dist || 0);
+            totalQuantidade += e.quantidade;
+            totalCusto += valorCusto;
+            totalDist += valorDist;
+            return [
+                new Date(e.data + 'T12:00:00').toLocaleDateString(),
+                prod ? prod.codigo : '-',
+                prod ? truncateText(prod.nome, 30) : `[${e.produto}]`,
+                e.quantidade,
+                valorCusto.toFixed(2),
+                valorDist.toFixed(2),
+                truncateText(e.obs || '', 35)
+            ];
+        });
+        const footer = [['TOTAIS', '', '', totalQuantidade, totalCusto.toFixed(2), totalDist.toFixed(2), '']];
+        
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        doc.setFontSize(14);
+        doc.text(`Relatório de Entradas (${new Date(inicio+'T12:00:00').toLocaleDateString()} a ${new Date(fim+'T12:00:00').toLocaleDateString()})`, 40, 40);
+        doc.autoTable({
+            startY: 60,
+            head: head,
+            body: body,
+            foot: footer,
+            styles: { fontSize: 9, cellPadding: 5 },
+            headStyles: { fillColor: [13, 110, 253], textColor: 255, fontStyle: 'bold' },
+            footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' },
+            margin: { left: 20, right: 20 }
+        });
+        doc.save(`relatorio_entradas_${inicio}_a_${fim}.pdf`);
+    }
+
+    // ===== Relatório Saída Individual (Resumido) =====
+    function gerarRelatorioSaidaIndividual() {
+        const rsiLojaSelect = document.getElementById('rsiLoja');
+        const selectedLojas = [...rsiLojaSelect.options]
+                                .filter(option => option.selected)
+                                .map(option => option.value);
+        const inicio = document.getElementById('rsiInicio').value;
+        const fim = document.getElementById('rsiFim').value;
+
+        if (selectedLojas.length === 0) { showToast('Selecione uma ou mais lojas.', 'warning'); return; }
+        if (!inicio || !fim) { showToast('Selecione o intervalo de datas.', 'warning'); return; }
+        if (inicio > fim) { showToast('A data inicial não pode ser maior que a data final.', 'warning'); return; }
+
+        const saidasFiltradas = movimentos.filter(m => 
+            m.tipo === 'saida' && 
+            selectedLojas.includes(m.loja) &&
+            m.data >= inicio && 
+            m.data <= fim
+        );
+
+        const saidasAgrupadas = saidasFiltradas.reduce((acc, s) => {
+            const valor = s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco);
+            if (!acc[s.produto]) {
+                const prod = produtos.find(p => p.codigo === s.produto);
+                acc[s.produto] = {
+                    codigo: prod ? prod.codigo : '-',
+                    nome: prod ? prod.nome : `[${s.produto}]`,
+                    quantidade: 0,
+                    valor: 0
+                };
+            }
+            acc[s.produto].quantidade += s.quantidade;
+            acc[s.produto].valor += valor;
+            return acc;
+        }, {});
+
+        const container = document.getElementById('relSaidaIndividualGrid');
+        container.innerHTML = '';
+        const data = Object.values(saidasAgrupadas);
+
+        if (data.length === 0) {
+            container.textContent = 'Nenhuma saída encontrada para a(s) loja(s) e período selecionados.';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.id = 'tRelSaidaIndividual';
+        table.className = 'table table-bordered table-striped table-sm w-100';
+        
+        const thead = table.createTHead();
+        thead.insertRow().innerHTML = '<th>Código</th><th>Produto</th><th>Quantidade Total</th><th>Valor Distrib. Total (R$)</th>';
+        
+        const tbody = table.createTBody();
+        let totalQuantidade = 0;
+        let totalValor = 0;
+
+        data.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(item => {
+            const tr = tbody.insertRow();
+            tr.insertCell().textContent = item.codigo;
+            tr.insertCell().textContent = item.nome;
+            tr.insertCell().textContent = item.quantidade;
+            tr.insertCell().textContent = item.valor.toFixed(2);
+            totalQuantidade += item.quantidade;
+            totalValor += item.valor;
+        });
+
+        const tfoot = table.createTFoot();
+        tfoot.insertRow().innerHTML = `<th colspan="2">TOTAL</th><th>${totalQuantidade}</th><th>${totalValor.toFixed(2)}</th>`;
+
+        container.appendChild(table);
+        if (dtInstances.relSaidaIndividual) dtInstances.relSaidaIndividual.destroy();
+        dtInstances.relSaidaIndividual = new DataTable('#tRelSaidaIndividual', { responsive: true, language: dtLang, pageLength: 10, lengthMenu: [10, 25, 50], ordering: false });
+    }
+
+    function exportarPDFSaidaIndividual() {
+        const rsiLojaSelect = document.getElementById('rsiLoja');
+        const selectedLojasCodigos = [...rsiLojaSelect.options]
+                                .filter(option => option.selected)
+                                .map(option => option.value);
+        const inicio = document.getElementById('rsiInicio').value;
+        const fim = document.getElementById('rsiFim').value;
+
+        if (selectedLojasCodigos.length === 0) { showToast('Selecione uma ou mais lojas para exportar.', 'warning'); return; }
+        if (!inicio || !fim || inicio > fim) { showToast('Selecione um intervalo de datas válido.', 'warning'); return; }
+
+        const saidasFiltradas = movimentos.filter(m => 
+            m.tipo === 'saida' && 
+            selectedLojasCodigos.includes(m.loja) &&
+            m.data >= inicio && 
+            m.data <= fim
+        );
+        
+        const saidasAgrupadas = saidasFiltradas.reduce((acc, s) => {
+            const valor = s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco);
+            if (!acc[s.produto]) {
+                const prod = produtos.find(p => p.codigo === s.produto);
+                acc[s.produto] = {
+                    codigo: prod ? prod.codigo : '-',
+                    nome: prod ? prod.nome : `[${s.produto}]`,
+                    quantidade: 0,
+                    valor: 0
+                };
+            }
+            acc[s.produto].quantidade += s.quantidade;
+            acc[s.produto].valor += valor;
+            return acc;
+        }, {});
+
+        const data = Object.values(saidasAgrupadas).sort((a,b) => a.nome.localeCompare(b.nome));
+        if (data.length === 0) { showToast('Nenhuma saída para exportar.', 'info'); return; }
+
+        const head = [['Código', 'Produto', 'Quantidade Total', 'Valor Total (R$)']];
+        let totalQuantidade = 0;
+        let totalValor = 0;
+
+        const body = data.map(item => {
+            totalQuantidade += item.quantidade;
+            totalValor += item.valor;
+            return [
+                item.codigo,
+                truncateText(item.nome, 45),
+                item.quantidade,
+                item.valor.toFixed(2)
+            ];
+        });
+        const footer = [['TOTAIS', '', totalQuantidade, totalValor.toFixed(2)]];
+        
+        const selectedLojaNames = lojas
+            .filter(l => selectedLojasCodigos.includes(l.codigo))
+            .map(l => l.nome)
+            .join(', ');
+
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+        doc.setFontSize(14);
+        const title = `Relatório de Saída Resumido - Loja(s): ${truncateText(selectedLojaNames, 50)}`;
+        const subtitle = `Período: ${new Date(inicio+'T12:00:00').toLocaleDateString()} a ${new Date(fim+'T12:00:00').toLocaleDateString()}`;
+        doc.text(title, 40, 40);
+        doc.setFontSize(10);
+        doc.text(subtitle, 40, 55);
+
+        doc.autoTable({
+            startY: 70,
+            head: head,
+            body: body,
+            foot: footer,
+            styles: { fontSize: 9, cellPadding: 5 },
+            headStyles: { fillColor: [13, 110, 253], textColor: 255, fontStyle: 'bold' },
+            footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' },
+            margin: { left: 40, right: 40 }
+        });
+        doc.save(`relatorio_saida_resumido_${inicio}_a_${fim}.pdf`);
+    }
+
+
+    // ===== Relatório FULL (Analítico e Sintético) =====
+    function getAlloc(loja, prod){ if(!alocacoes[loja]) return 0; return Number(alocacoes[loja][prod]||0); }
+    function setAlloc(loja, prod, qtd){ if(!alocacoes[loja]) alocacoes[loja]={}; alocacoes[loja][prod] = Number(qtd)||0; }
+
+    function renderRelFull() {
+        const type = document.querySelector('input[name="relFullType"]:checked').value;
+        document.getElementById('btnSalvarAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
+
+        if (type === 'analitico') {
+            renderRelFullAnalitico();
+        } else {
+            renderRelFullSintetico();
+        }
+    }
+
+    function renderRelFullAnalitico(){
+      const container=document.getElementById('relFull'); container.innerHTML='';
+      if(produtos.length===0 || lojas.length===0){ container.innerHTML = '<div class="text-muted">Cadastre produtos e lojas para usar o relatório FULL.</div>'; return; }
+      
+      const table=document.createElement('table');
+      table.className='table table-bordered table-striped table-sm w-100';
+      table.id='tRelFullAnalitico';
+
+      const thead=table.createTHead();
+      const trh=thead.insertRow();
+      trh.innerHTML = '<th>Produto</th>' + lojas.map(l=>`<th>${l.nome}</th>`).join('') + '<th>Total Qtde</th><th>Total Prod (R$)</th>';
+
+      const tbody=table.createTBody();
+      const columnTotals = new Array(lojas.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
+      let grandTotalQtde = 0;
+      let grandTotalValor = 0;
+
+      produtos.forEach(p=>{
+        const tr=tbody.insertRow();
+        tr.insertCell().textContent = `${p.codigo} - ${p.nome}`;
+        let totalProdQtde = 0;
+        let totalProdValor = 0;
+        
+        lojas.forEach((l, index)=>{
+          const td = tr.insertCell();
+          const qtd = getAlloc(l.codigo, p.codigo);
+          const input = document.createElement('input');
+          input.type='number'; input.min='0'; input.className='form-control form-control-sm'; input.value = qtd;
+          input.dataset.loja = l.codigo; input.dataset.produto = p.codigo;
+          td.appendChild(input);
+          
+          const valor = qtd * Number(p.dist||0);
+          totalProdQtde += qtd;
+          totalProdValor += valor;
+          columnTotals[index].qtde += qtd;
+          columnTotals[index].valor += valor;
+        });
+
+        tr.insertCell().textContent = totalProdQtde;
+        tr.insertCell().textContent = `R$ ${totalProdValor.toFixed(2)}`;
+        grandTotalQtde += totalProdQtde;
+        grandTotalValor += totalProdValor;
+      });
+
+      const tfoot = table.createTFoot();
+      const trf = tfoot.insertRow();
+      trf.insertCell().outerHTML = '<th>TOTAIS</th>';
+      columnTotals.forEach(total => {
+          const th = document.createElement('th');
+          th.innerHTML = `${total.qtde}<br><small>R$ ${total.valor.toFixed(2)}</small>`;
+          trf.appendChild(th);
+      });
+      trf.insertCell().outerHTML = `<th>${grandTotalQtde}</th>`;
+      trf.insertCell().outerHTML = `<th>R$ ${grandTotalValor.toFixed(2)}</th>`;
+
+      container.appendChild(table);
+      if(dtInstances.relFullAnalitico) dtInstances.relFullAnalitico.destroy();
+      dtInstances.relFullAnalitico = new DataTable('#tRelFullAnalitico', {
+          paging: true,
+          searching: true,
+          info: true,
+          ordering: true,
+          responsive: true,
+          language: dtLang,
+          pageLength: 10,
+          lengthMenu: [10, 25, 50, -1],
+          columnDefs: [
+              { "orderable": false, "targets": Array.from({length: lojas.length + 2}, (_, i) => i + 1) }
+          ]
+      });
+    }
+
+    function renderRelFullSintetico() {
+        const container=document.getElementById('relFull'); container.innerHTML='';
+        if (lojas.length === 0) {
+            container.innerHTML = '<div class="text-muted">Cadastre lojas para ver o relatório.</div>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.className = 'table table-bordered table-striped table-sm w-100';
+        table.id = 'tRelFullSintetico';
+
+        const thead = table.createTHead();
+        thead.insertRow().innerHTML = '<th>Loja</th><th>Total Quantidade</th><th>Total Valor (R$)</th>';
+
+        const tbody = table.createTBody();
+        let grandTotalQtde = 0;
+        let grandTotalValor = 0;
+
+        lojas.forEach(loja => {
+            let totalLojaQtde = 0;
+            let totalLojaValor = 0;
+            produtos.forEach(produto => {
+                const qtd = getAlloc(loja.codigo, produto.codigo);
+                totalLojaQtde += qtd;
+                totalLojaValor += qtd * (produto.dist || 0);
+            });
+
+            const tr = tbody.insertRow();
+            tr.insertCell().textContent = loja.nome;
+            tr.insertCell().textContent = totalLojaQtde;
+            tr.insertCell().textContent = `R$ ${totalLojaValor.toFixed(2)}`;
+            grandTotalQtde += totalLojaQtde;
+            grandTotalValor += totalLojaValor;
+        });
+
+        const tfoot = table.createTFoot();
+        const trf = tfoot.insertRow();
+        trf.insertCell().outerHTML = '<th>TOTAIS</th>';
+        trf.insertCell().outerHTML = `<th>${grandTotalQtde}</th>`;
+        trf.insertCell().outerHTML = `<th>R$ ${grandTotalValor.toFixed(2)}</th>`;
+
+        container.appendChild(table);
+        if (dtInstances.relFullSintetico) dtInstances.relFullSintetico.destroy();
+        dtInstances.relFullSintetico = new DataTable('#tRelFullSintetico', {
+            paging: true,
+            searching: true,
+            info: true,
+            ordering: true,
+            responsive: true,
+            language: dtLang,
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, -1]
+        });
+    }
+
+
+    function salvarAlocacoesFromGrid(){
+      const inputs = document.querySelectorAll('#tRelFullAnalitico input[type="number"]');
+      if (inputs.length === 0) {
+          showToast('Mude para o modo Analítico para editar as alocações.', 'info');
+          return;
+      }
+      inputs.forEach(inp=> setAlloc(inp.dataset.loja, inp.dataset.produto, Number(inp.value||0)));
+      save(KEY_ALLOC, alocacoes); 
+      renderRelFull(); 
+      showToast('Alocações salvas.', 'success');
+    }
+
+    function exportarPDFFull(){
+        const type = document.querySelector('input[name="relFullType"]:checked').value;
+        if (type === 'analitico') {
+            exportarPDFFullAnalitico();
+        } else {
+            exportarPDFFullSintetico();
+        }
+    }
+
+    function exportarPDFFullAnalitico(){
+      if(produtos.length===0 || lojas.length===0){ showToast('Cadastre produtos e lojas.', 'warning'); return; }
+      
+      const head = [['Produto', ...lojas.map(l=>l.nome), 'Total Qtde', 'Total Prod (R$)']];
+      const body = [];
+      const columnTotals = new Array(lojas.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
+      let grandTotalQtde = 0;
+      let grandTotalValor = 0;
+
+      produtos.forEach(p => {
+          const row = [truncateText(`${p.codigo} - ${p.nome}`, 30)];
+          let totalProdQtde = 0;
+          let totalProdValor = 0;
+          lojas.forEach((l, index) => {
+              const qtd = getAlloc(l.codigo, p.codigo);
+              const valor = qtd * Number(p.dist || 0);
+              row.push(`${qtd}`);
+              totalProdQtde += qtd;
+              totalProdValor += valor;
+              columnTotals[index].qtde += qtd;
+              columnTotals[index].valor += valor;
+          });
+          row.push(totalProdQtde);
+          row.push(`R$ ${totalProdValor.toFixed(2)}`);
+          body.push(row);
+          grandTotalQtde += totalProdQtde;
+          grandTotalValor += totalProdValor;
+      });
+
+      const footer = [['TOTAIS', ...columnTotals.map(t => `${t.qtde}\n(R$ ${t.valor.toFixed(2)})`), grandTotalQtde, `R$ ${grandTotalValor.toFixed(2)}`]];
+
+      const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+      doc.setFontSize(14);
+      doc.text('Relatório FULL Analítico - Estoque por Loja', 40, 40);
+      doc.autoTable({ 
+          startY:60, 
+          head: head, 
+          body: body,
+          foot: footer,
+          styles:{fontSize:8, cellPadding:4, halign: 'center'}, 
+          headStyles:{fillColor:[13,110,253], textColor:255, fontStyle: 'bold'},
+          footStyles:{fillColor:[233, 236, 239], textColor:0, fontStyle: 'bold'},
+          margin:{left:20,right:20} 
+      });
+      doc.save('relatorio_full_analitico.pdf');
+    }
+
+    function exportarPDFFullSintetico() {
+        if (lojas.length === 0) {
+            showToast('Nenhuma loja cadastrada para gerar o relatório.', 'warning');
+            return;
+        }
+        const head = [['Loja', 'Total Quantidade', 'Total Valor (R$)']];
+        const body = [];
+        let grandTotalQtde = 0;
+        let grandTotalValor = 0;
+
+        lojas.forEach(loja => {
+            let totalLojaQtde = 0;
+            let totalLojaValor = 0;
+            produtos.forEach(produto => {
+                const qtd = getAlloc(loja.codigo, produto.codigo);
+                totalLojaQtde += qtd;
+                totalLojaValor += qtd * (produto.dist || 0);
+            });
+            body.push([truncateText(loja.nome, 40), totalLojaQtde, `R$ ${totalLojaValor.toFixed(2)}`]);
+            grandTotalQtde += totalLojaQtde;
+            grandTotalValor += totalLojaValor;
+        });
+
+        const footer = [['TOTAIS', grandTotalQtde, `R$ ${grandTotalValor.toFixed(2)}`]];
+
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        doc.setFontSize(14);
+        doc.text('Relatório FULL Sintético - Totais por Loja', 40, 40);
+        doc.autoTable({
+            startY: 60,
+            head: head,
+            body: body,
+            foot: footer,
+            styles: { fontSize: 10, cellPadding: 6 },
+            headStyles: { fillColor: [13, 110, 253], textColor: 255, fontStyle: 'bold' },
+            footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' },
+            margin: { left: 40, right: 40 }
+        });
+        doc.save('relatorio_full_sintetico.pdf');
+    }
+
+
+    // Import / Export
+    function exportJson(){ const data = buildDataObject(); downloadBlob(JSON.stringify(data,null,2), 'application/json', 'estoque_backup.json'); }
+    function importarJson(e){
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=evt=>{
+        try{
+          const obj=JSON.parse(evt.target.result);
+          if(obj.produtos && obj.lojas && obj.movimentos){
+            produtos=obj.produtos; lojas=obj.lojas; movimentos=obj.movimentos; 
+            alocacoes = obj.alocacoes || {};
+            priceTables = obj.priceTables || {};
+            save(KEY_PRODUCTS,produtos); save(KEY_LOJAS,lojas); save(KEY_MOVES,movimentos); save(KEY_ALLOC, alocacoes); save(KEY_PRICETABLES, priceTables);
+            renderAll(); showToast('Dados importados com sucesso!', 'success');
+          } else showToast('Arquivo JSON inválido ou não contém os dados esperados.', 'danger');
+        }catch(err){ showToast('Erro ao ler o arquivo: '+err.message, 'danger'); }
+        e.target.value='';
+      };
+      r.readAsText(f);
+    }
+    
+    // ===== Tabelas de Preço =====
+    function renderTabelasPreco() {
+        const tabela = document.getElementById('selectTabelaPreco').value || 'drop';
+        if (!priceTables[tabela]) priceTables[tabela] = {};
+
+        const data = produtos.map(p => {
+            const customPrice = priceTables[tabela][p.codigo] || '';
+            return {
+                codigo: p.codigo,
+                nome: p.nome,
+                precoPadrao: (p.dist || 0).toFixed(2),
+                precoCustom: `<input type="number" step="0.01" class="form-control form-control-sm" data-codigo="${p.codigo}" value="${customPrice}">`
+            };
+        });
+
+        updateDataTable(dtInstances.tabelaPrecos, data);
+    }
+    
+    function salvarTabelaPreco() {
+        const tabela = document.getElementById('selectTabelaPreco').value;
+        const inputs = document.querySelectorAll('#tabelaPrecosCustom tbody input');
+        if (!priceTables[tabela]) priceTables[tabela] = {};
+
+        inputs.forEach(input => {
+            const codigo = input.dataset.codigo;
+            const valor = parseFloat(input.value);
+            if (valor && valor > 0) {
+                priceTables[tabela][codigo] = valor;
+            } else {
+                delete priceTables[tabela][codigo]; // Remove se o valor for inválido ou zero
+            }
+        });
+        save(KEY_PRICETABLES, priceTables);
+        showToast(`Tabela '${tabela}' salva com sucesso!`, 'success');
+        renderTabelasPreco();
+    }
+    
+    function importarTabelaPrecoCSV(e) {
+        e.preventDefault();
+        const tabela = document.getElementById('importSelectTabela').value;
+        const fileInput = document.getElementById('importPrecosFile');
+        const file = fileInput.files[0];
+
+        if (!tabela || !file) {
+            showToast('Selecione a tabela e um arquivo CSV.', 'warning');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const text = event.target.result;
+            const lines = text.split(/\r\n|\n/);
+            let successCount = 0;
+            let errorCount = 0;
+
+            if (!priceTables[tabela]) priceTables[tabela] = {};
+
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                const parts = line.split(';');
+                if (parts.length === 2) {
+                    const codigo = parts[0].trim();
+                    const preco = parseFloat(parts[1].replace(',', '.').trim());
+                    if (codigo && !isNaN(preco) && produtos.some(p => p.codigo === codigo)) {
+                        priceTables[tabela][codigo] = preco;
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } else {
+                    errorCount++;
+                }
+            });
+
+            save(KEY_PRICETABLES, priceTables);
+            showToast(`${successCount} preços importados. ${errorCount} linhas com erro.`, 'info');
+            fileInput.value = ''; // Reset input
+            if (getActiveTab() === 'tabelas-preco') {
+                renderTabelasPreco();
+            }
+        };
+        reader.readAsText(f);
+    }
+    
+    function getEffectivePrice(productCode, tableName = 'empresa') {
+        const prod = produtos.find(p => p.codigo === productCode);
+        if (!prod) return 0;
+
+        if (tableName !== 'empresa' && priceTables[tableName] && priceTables[tableName][productCode]) {
+            return parseFloat(priceTables[tableName][productCode]);
+        }
+        return prod.dist || 0;
+    }
+
+
+    // ===== DataTables e Renderização Geral =====
+    function initializeDataTables() {
+        dtInstances.produtos = new DataTable('#tabelaProdutos', {
+            responsive: true, language: dtLang, pageLength: 10, lengthMenu: [5,10,25,50,100],
+            columns: [
+                { data: 'codigo' }, { data: 'nome' }, { data: 'estoque' },
+                { data: 'custo', render: $.fn.dataTable.render.number('.', ',', 2, 'R$ ') },
+                { data: 'dist', render: $.fn.dataTable.render.number('.', ',', 2, 'R$ ') },
+                { data: 'acoes', orderable: false, searchable: false }
+            ]
+        });
+        dtInstances.lojas = new DataTable('#tabelaLojas', {
+            responsive: true, language: dtLang, pageLength: 10, lengthMenu: [5,10,25,50,100],
+            columns: [
+                { data: 'codigo' }, { data: 'nome' }, { data: 'responsavel' },
+                { data: 'acoes', orderable: false, searchable: false }
+            ]
+        });
+        dtInstances.entradas = new DataTable('#tabelaEntradas', {
+            responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
+            columns: [
+                { data: 'data' }, {data: 'codigo'}, { data: 'produto' }, { data: 'quantidade' },
+                { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
+            ]
+        });
+        dtInstances.saidas = new DataTable('#tabelaSaidas', {
+            responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
+            columns: [
+                { data: 'data' }, {data: 'codigo'}, { data: 'produto' }, { data: 'loja' }, { data: 'quantidade' },
+                { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
+            ]
+        });
+        dtInstances.tabelaPrecos = new DataTable('#tabelaPrecosCustom', {
+             responsive: true,
+             language: dtLang,
+             pageLength: 10,
+             lengthMenu: [10,25,50,100],
+             ordering: false,
+             columns: [
+                 { data: 'codigo' },
+                 { data: 'nome' },
+                 { data: 'precoPadrao' },
+                 { data: 'precoCustom', orderable: false, searchable: false }
+             ]
+        });
+    }
+
+    function updateDataTable(instance, data) {
+        if (instance) {
+            instance.clear().rows.add(data).draw();
+        }
+    }
+
+    function renderAll(){
+      const produtosData = produtos.map(p => ({
+          ...p,
+          estoque: calculaEstoqueProduto(p.codigo),
+          acoes: `<div class="d-flex gap-1">
+                      <button class='btn btn-sm btn-outline-primary' data-codigo='${p.codigo}' data-action='edit'>Editar</button>
+                      <button class='btn btn-sm btn-outline-danger' data-codigo='${p.codigo}' data-action='delete'>Excluir</button>
+                  </div>`
+      }));
+      const lojasData = lojas.map(l => ({
+          ...l,
+          acoes: `<button class='btn btn-sm btn-outline-danger' data-codigo='${l.codigo}' data-action='delete'>Excluir</button>`
+      }));
+
+      updateDataTable(dtInstances.produtos, produtosData);
+      updateDataTable(dtInstances.lojas, lojasData);
+      
+      preencherSelectsProdutos();
+      preencherSelectsLojas();
+      preencherSelectsTabelaPreco();
+      
+      const activeTab = getActiveTab();
+      // Renderiza a aba ativa para garantir que os dados estejam atualizados
+      showTab(activeTab);
+    }
+  </script>
+</body>
+</html>
+

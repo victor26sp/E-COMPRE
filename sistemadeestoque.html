@@ -3,10 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel - Sistema de Controle de Estoque (v17 - Dashboard Avançada)</title>
-<!-- Favicon -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
+  <title>Painel - Sistema de Controle de Estoque (v18 - Editor Rápido)</title>
 
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -16,14 +13,69 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.4/r-3.0.2/datatables.min.css">
 
   <style>
-    :root{
-      --sidebar-width:280px;
-      --sidebar-collapsed:68px;
-      --rightpanel-width:360px;
-      --btn-gray:#6c757d;
+    :root {
+        --sidebar-width: 280px;
+        --sidebar-collapsed: 68px;
+        --rightpanel-width: 360px;
+        --bs-primary-rgb: 13, 110, 253;
+        --bs-body-bg: #f5f7fb;
+        --bs-body-color: #212529;
+        --bs-border-color: #dee2e6;
+        --card-bg: #ffffff;
+        --card-border-color: #e9ecef;
+        --table-striped-bg: rgba(0, 0, 0, 0.02);
+        --modal-bg: #ffffff;
+        --input-bg: #fff;
     }
-    html, body{height:100%}
-    body{overflow:hidden;background:#f5f7fb}
+
+    body.dark-mode {
+        --bs-body-bg: #121212;
+        --bs-body-color: #e0e0e0;
+        --bs-border-color: #444;
+        --card-bg: #1e1e1e;
+        --card-border-color: #333;
+        --table-striped-bg: rgba(255, 255, 255, 0.05);
+        --modal-bg: #2a2a2a;
+        --input-bg: #2a2a2a;
+
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            color: var(--bs-body-color);
+            border-color: var(--bs-border-color);
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            color: var(--bs-body-color);
+            border-color: #86b7fe;
+        }
+        .table {
+            --bs-table-color: var(--bs-body-color);
+            --bs-table-border-color: var(--bs-border-color);
+            --bs-table-striped-bg: var(--table-striped-bg);
+        }
+        .modal-content {
+            background-color: var(--modal-bg);
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--card-border-color);
+        }
+        .list-group-item {
+            background-color: var(--card-bg);
+            border-color: var(--bs-border-color);
+        }
+        .bg-light {
+           background-color: #333 !important;
+        }
+        .text-muted {
+            color: #aaa !important;
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    }
+    html, body{height:100%; background-color: var(--bs-body-bg); color: var(--bs-body-color);}
+    body{overflow:hidden;}
 
     /* Sidebar (left) */
     .sidebar{
@@ -64,14 +116,14 @@
       position:fixed;right:0;top:0;
       width:var(--rightpanel-width);
       height:100vh;overflow:auto;
-      background:#ffffff;border-left:1px solid #e9ecef;
+      background:var(--card-bg); border-left:1px solid var(--bs-border-color);
       padding:1rem;
       transition:transform .2s ease;
       z-index:1029;
       box-shadow:0 0 12px rgba(0,0,0,.06);
     }
 
-    .small-muted{font-size:.88rem;color:#6c757d}
+    .small-muted{font-size:.88rem;}
     .report-grid{overflow-y:auto;max-height:65vh}
 
     /* Collapsed states */
@@ -81,23 +133,9 @@
 
     body.collapsed-right .main-area{margin-right:0}
     body.collapsed-right .right-panel{transform:translateX(100%)}
-
-    /* Gray icon buttons inside bars */
-    .btn-gray{
-      background:#e9ecef;border:1px solid #ced4da;color:#495057;
-    }
-    .btn-gray:hover{background:#dee2e6;color:#212529}
-
-    /* Tables responsiveness */
-    .table-responsive{overflow-x:auto}
+    
     table th, table td{vertical-align:middle}
-    #tRelFull tfoot th, #tRelFullSintetico tfoot th, #tRelSaidas tfoot th, #tRelEstoque tfoot th, #tRelEntradas tfoot th, #tRelSaidaIndividual tfoot th {
-        font-weight: 600;
-        background-color: #f8f9fa;
-    }
-    #tabelaContagem .diff-pos { color: #198754; font-weight: bold; }
-    #tabelaContagem .diff-neg { color: #dc3545; font-weight: bold; }
-
+    
     /* Toast Notification Area */
     .toast-container { z-index: 1090; }
 
@@ -114,34 +152,18 @@
         font-weight: 500;
         color: #6c757d;
     }
+    body.dark-mode .dashboard-card .card-title { color: #aaa; }
     .dashboard-card .card-text {
         font-size: 1.75rem;
         font-weight: 600;
         color: #0d6efd;
     }
-    .dashboard-card .card-text.text-danger {
-        color: #dc3545;
-    }
-     .dashboard-card .card-text.text-success {
-        color: #198754;
-    }
-    .dashboard-card .card-text.text-warning {
-        color: #ffc107;
-    }
-    .dashboard-card .card-text.text-info {
-        color: #0dcaf0;
-    }
+    .dashboard-card .card-text.text-danger { color: #dc3545; }
+    .dashboard-card .card-text.text-success { color: #198754; }
+    .dashboard-card .card-text.text-warning { color: #ffc107; }
+    .dashboard-card .card-text.text-info { color: #0dcaf0; }
     
-    /* Right Panel Hover Trigger */
-    #right-panel-trigger {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 10px;
-        height: 100%;
-        z-index: 1031; /* Above other content but below an open panel */
-        cursor: pointer;
-    }
+    #qr-reader_dashboard_section_csr { display: none; }
 
     /* Smaller screens */
     @media (max-width: 992px){
@@ -205,7 +227,10 @@
       
       <a class="nav-link" data-tab="importexport"><i class="bi bi-arrow-left-right"></i> <span class="hide-when-collapsed">Import / Export</span></a>
     </nav>
-    <div class="mt-auto small-muted hide-when-collapsed">AutoBackup no navegador</div>
+    <div class="mt-auto">
+        <div class="small-muted hide-when-collapsed">AutoBackup no navegador</div>
+        <a class="nav-link" href="#" id="darkModeToggle"><i class="bi bi-moon-stars-fill"></i> <span class="hide-when-collapsed">Modo Escuro</span></a>
+    </div>
   </aside>
 
   <!-- Main content -->
@@ -715,6 +740,7 @@
                 </div>
                 <!-- Botões de Ação -->
                 <button id="btnSalvarAlloc" class="btn btn-success btn-sm">Salvar Alocações</button>
+                <button id="btnLimparAlloc" class="btn btn-danger btn-sm">Limpar Alocações</button>
                 <button id="btnExportPdfFull" class="btn btn-outline-primary btn-sm">Exportar PDF</button>
             </div>
         </div>
@@ -768,30 +794,61 @@
     </section>
   </main>
   
-  <div id="right-panel-trigger"></div>
-
-  <!-- Right panel -->
   <aside class="right-panel">
-    <div class="d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Editor Rápido</h5>
-    </div>
-    <hr>
-    <div id="editorArea">
-      <h6>Editar Movimento</h6>
-      <form id="formEdit">
-        <input type="hidden" id="editIndex">
-        <div class="mb-2"><label>Tipo</label><select id="editTipo" class="form-select" disabled><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
-        <div class="mb-2"><label>Produto</label><select id="editProduto" class="form-select"></select></div>
-        <div class="mb-2" id="editLojaWrap"><label>Loja (apenas para saída)</label><select id="editLoja" class="form-select"></select></div>
-        <div class="mb-2"><label>Quantidade</label><input id="editQuantidade" type="number" class="form-control" min="1"></div>
-        <div class="mb-2"><label>Data</label><input id="editData" type="date" class="form-control"></div>
-        <div class="mb-2"><label>Observação</label><input id="editObs" class="form-control"></div>
-        <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-primary">Salvar Alterações</button>
-          <button id="btnCancelEdit" type="button" class="btn btn-outline-secondary">Cancelar</button>
-        </div>
-      </form>
-    </div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Ações Rápidas</h5>
+      </div>
+      
+      <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-3">
+          <button class="btn btn-success btn-sm" type="button" id="btnShowNovaEntrada"><i class="bi bi-plus-circle"></i> Nova Entrada</button>
+          <button class="btn btn-danger btn-sm" type="button" id="btnShowNovaSaida"><i class="bi bi-dash-circle"></i> Nova Saída</button>
+      </div>
+      <hr>
+
+      <!-- Formulário de Nova Entrada -->
+      <div id="novaEntradaArea" class="d-none">
+          <h6>Nova Entrada Rápida</h6>
+          <form id="formNovaEntrada" class="d-flex flex-column gap-2">
+              <div class="input-group"><select id="qrProdutoEntrada" class="form-select" required><option value="">-- Produto --</option></select><button class="btn btn-outline-secondary" type="button" id="btnScanQrEntrada"><i class="bi bi-qr-code-scan"></i></button></div>
+              <div><label class="form-label small">Quantidade</label><input id="qrQuantidadeEntrada" type="number" min="1" class="form-control" value="1" required></div>
+              <div><label class="form-label small">Data</label><input id="qrDataEntrada" type="date" class="form-control" required></div>
+              <div><label class="form-label small">Observação</label><input id="qrObsEntrada" class="form-control"></div>
+              <button class="btn btn-success mt-2">Registrar Entrada</button>
+          </form>
+      </div>
+
+      <!-- Formulário de Nova Saída -->
+      <div id="novaSaidaArea" class="d-none">
+          <h6>Nova Saída Rápida</h6>
+          <form id="formNovaSaida" class="d-flex flex-column gap-2">
+              <div class="input-group"><select id="qrProdutoSaida" class="form-select" required><option value="">-- Produto --</option></select><button class="btn btn-outline-secondary" type="button" id="btnScanQrSaida"><i class="bi bi-qr-code-scan"></i></button></div>
+              <div><label class="form-label small">Loja</label><select id="qrLojaSaida" class="form-select" required></select></div>
+              <div><label class="form-label small">Tabela de Preço</label><select id="qrTabelaPrecoSaida" class="form-select" required></select></div>
+              <div><label class="form-label small">Quantidade</label><input id="qrQuantidadeSaida" type="number" min="1" class="form-control" value="1" required></div>
+              <div><label class="form-label small">Data</label><input id="qrDataSaida" type="date" class="form-control" required></div>
+              <div><label class="form-label small">Observação</label><input id="qrObsSaida" class="form-control"></div>
+              <button class="btn btn-danger mt-2">Registrar Saída</button>
+          </form>
+      </div>
+
+      <!-- Formulário de Edição -->
+      <div id="editorArea" class="d-none">
+          <h6>Editar Movimento</h6>
+          <form id="formEdit" class="d-flex flex-column gap-2">
+              <input type="hidden" id="editIndex">
+              <div><label class="form-label small">Tipo</label><select id="editTipo" class="form-select" disabled><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+              <div><label class="form-label small">Produto</label><select id="editProduto" class="form-select"></select></div>
+              <div id="editLojaWrap"><label class="form-label small">Loja</label><select id="editLoja" class="form-select"></select></div>
+              <div id="editTabelaWrap"><label class="form-label small">Tabela de Preço</label><select id="editTabelaPreco" class="form-select"></select></div>
+              <div><label class="form-label small">Quantidade</label><input id="editQuantidade" type="number" class="form-control" min="1"></div>
+              <div><label class="form-label small">Data</label><input id="editData" type="date" class="form-control"></div>
+              <div><label class="form-label small">Observação</label><input id="editObs" class="form-control"></div>
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                  <button class="btn btn-primary">Salvar Alterações</button>
+                  <button id="btnCancelEdit" type="button" class="btn btn-outline-secondary">Cancelar</button>
+              </div>
+          </form>
+      </div>
   </aside>
 
   <!-- Toast Container (para notificações) -->
@@ -816,6 +873,21 @@
     </div>
   </div>
 
+  <!-- Modal do Leitor de QR Code -->
+  <div class="modal fade" id="qrScannerModal" tabindex="-1" aria-labelledby="qrScannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="qrScannerModalLabel">Escanear Código do Produto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="qr-reader" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Libraries -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -826,6 +898,9 @@
   <!-- jsPDF and AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  
+  <!-- QR Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
   <script>
     const { jsPDF } = window.jspdf;
@@ -837,6 +912,7 @@
     const KEY_ALLOC = 'estoque_alocacoes_v13';
     const KEY_AUTOBACK = 'estoque_autobackup_v13';
     const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
+    const KEY_THEME = 'estoque_theme_v18';
     const LOW_STOCK_THRESHOLD = 10;
     const STAGNANT_STOCK_DAYS = 90;
 
@@ -852,9 +928,11 @@
     const menu = document.getElementById('menu');
     const tabs = document.querySelectorAll('.tab-page');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
     const dtInstances = {}; // Armazena instâncias do DataTables
-    let saidasPorLojaChart; // Armazena instância do Chart.js
-    let vendasDiariasChartInstance; // Armazena instância do Chart.js
+    let saidasPorLojaChart, vendasDiariasChartInstance;
+    let html5QrCode;
+
 
     // Objeto de tradução para a biblioteca DataTables.
     const dtLang = {
@@ -873,16 +951,18 @@
 
     // ===== Função de Inicialização =====
     document.addEventListener('DOMContentLoaded', function() {
+      loadTheme();
       bindMenu();
       bindForms();
       bindTogglesAndHover();
       bindTableActions();
       bindDashboardFilters();
       bindFullReportControls();
+      bindQuickEditor();
 
       // Define datas padrão para os filtros
       const today = new Date().toISOString().slice(0,10);
-      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim', 'archiveDate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
+      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim', 'archiveDate', 'qrDataEntrada', 'qrDataSaida'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
       const past = new Date(); past.setDate(past.getDate()-30); // Padrão de 30 dias
       ['rInicio', 'dashInicio', 'reInicio', 'rsiInicio'].forEach(id => {
           const el = document.getElementById(id); if(el) el.value = past.toISOString().slice(0,10);
@@ -962,19 +1042,14 @@
           handleInitialSidebarState();
       });
       
-      // Hover para o painel direito
-      const rightPanel = document.querySelector('.right-panel');
-      const rightPanelTrigger = document.getElementById('right-panel-trigger');
-
-      rightPanelTrigger.addEventListener('mouseenter', () => {
-          document.body.classList.remove('collapsed-right');
-      });
-      rightPanel.addEventListener('mouseleave', () => {
-          document.body.classList.add('collapsed-right');
-      });
-      
       // Observador para responsividade
       new ResizeObserver(handleInitialSidebarState).observe(document.body);
+
+      // Dark Mode Toggle
+      document.getElementById('darkModeToggle').addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleTheme();
+      });
     }
 
     function handleInitialSidebarState() {
@@ -986,6 +1061,21 @@
         }
     }
 
+    function loadTheme() {
+        const theme = localStorage.getItem(KEY_THEME);
+        if(theme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        if(document.body.classList.contains('dark-mode')) {
+            localStorage.setItem(KEY_THEME, 'dark');
+        } else {
+            localStorage.setItem(KEY_THEME, 'light');
+        }
+    }
 
     // ===== Bind de Formulários, Botões e Filtros =====
     function bindForms(){
@@ -1044,6 +1134,7 @@
       document.getElementById('btnExportPdfRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); exportarPDFSaidaIndividual(); });
 
       document.getElementById('btnSalvarAlloc').addEventListener('click', e=>{ e.preventDefault(); salvarAlocacoesFromGrid(); });
+      document.getElementById('btnLimparAlloc').addEventListener('click', e => { e.preventDefault(); limparAlocacoes(); });
       document.getElementById('btnExportPdfFull').addEventListener('click', e=>{ e.preventDefault(); exportarPDFFull(); });
 
       document.getElementById('exportJson').addEventListener('click', exportJson);
@@ -1391,33 +1482,48 @@
     // Edição Rápida
     function abrirEditor(idx){
       const m=movimentos[idx]; if(!m) { showToast('Movimento não encontrado', 'danger'); return; }
+      setRightPanelState('edit');
       document.getElementById('editIndex').value=idx; document.getElementById('editTipo').value=m.tipo;
-      preencherSelectsProdutos(); document.getElementById('editProduto').value=m.produto;
-      preencherSelectsLojas();
-      if(m.tipo==='saida'){ document.getElementById('editLojaWrap').style.display='block'; document.getElementById('editLoja').value=m.loja||''; }
-      else { document.getElementById('editLojaWrap').style.display='none'; document.getElementById('editLoja').value=''; }
+      preencherSelectsProdutos(['editProduto']); document.getElementById('editProduto').value=m.produto;
+      preencherSelectsLojas(['editLoja']);
+      preencherSelectsTabelaPreco(['editTabelaPreco']);
+      if(m.tipo==='saida'){ 
+          document.getElementById('editLojaWrap').style.display='block'; document.getElementById('editLoja').value=m.loja||''; 
+          document.getElementById('editTabelaWrap').style.display='block'; document.getElementById('editTabelaPreco').value=m.tabelaPreco||'empresa'; 
+      }
+      else { 
+          document.getElementById('editLojaWrap').style.display='none'; document.getElementById('editLoja').value='';
+          document.getElementById('editTabelaWrap').style.display='none'; document.getElementById('editTabelaPreco').value='';
+      }
       document.getElementById('editQuantidade').value=m.quantidade; document.getElementById('editData').value=m.data; document.getElementById('editObs').value=m.obs||'';
       
       document.body.classList.remove('collapsed-right');
     }
-    function clearEdit(){ document.getElementById('formEdit').reset(); document.getElementById('editIndex').value=''; document.getElementById('editData').value=new Date().toISOString().slice(0,10); document.getElementById('editLojaWrap').style.display='block'; }
+    function clearEdit(){ 
+      setRightPanelState('none');
+      document.getElementById('formEdit').reset(); document.getElementById('editIndex').value='';
+    }
     function salvarEdicao(){
       const idx=Number(document.getElementById('editIndex').value); if(isNaN(idx) || idx < 0 || idx >= movimentos.length) { showToast('Nenhum movimento selecionado', 'danger'); return; }
       const tipo=document.getElementById('editTipo').value; const produto=document.getElementById('editProduto').value; const loja=document.getElementById('editLoja').value;
+      const tabelaPreco = document.getElementById('editTabelaPreco').value;
       const quantidade=Number(document.getElementById('editQuantidade').value); const data=document.getElementById('editData').value; const obs=document.getElementById('editObs').value.trim();
       if(!produto||quantidade<=0||!data||(tipo==='saida'&&!loja)){ showToast('Preencha os campos corretamente', 'danger'); return; }
       movimentos[idx].produto = produto;
       movimentos[idx].quantidade = quantidade;
       movimentos[idx].data = data;
       movimentos[idx].obs = obs;
-      if(tipo==='saida') movimentos[idx].loja = loja;
+      if(tipo==='saida') {
+        movimentos[idx].loja = loja;
+        movimentos[idx].tabelaPreco = tabelaPreco;
+      }
       save(KEY_MOVES, movimentos); renderAll(); clearEdit(); showToast('Movimento atualizado', 'success');
     }
 
     // ===== Renderização e Relatórios =====
     // Selects
-    function preencherSelectsLojas(){
-      ['sLoja','editLoja', 'rsiLoja'].forEach(id=>{ 
+    function preencherSelectsLojas(ids = ['sLoja','editLoja', 'rsiLoja', 'qrLojaSaida']){
+      ids.forEach(id=>{ 
           const sel=document.getElementById(id); 
           if(!sel) return; 
           
@@ -1450,13 +1556,12 @@
           }
       });
     }
-    function preencherSelectsProdutos(){
-      ['eProduto','sProduto','editProduto'].forEach(id=>{ const sel=document.getElementById(id); if(!sel) return; const old=sel.value; sel.innerHTML='<option value="">-- Selecione --</option>'; produtos.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.codigo; opt.textContent=`${p.codigo} - ${p.nome}`; sel.appendChild(opt); }); if(old) sel.value=old; });
+    function preencherSelectsProdutos(ids = ['eProduto','sProduto','editProduto', 'qrProdutoEntrada', 'qrProdutoSaida']){
+      ids.forEach(id=>{ const sel=document.getElementById(id); if(!sel) return; const old=sel.value; sel.innerHTML='<option value="">-- Selecione --</option>'; produtos.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.codigo; opt.textContent=`${p.codigo} - ${p.nome}`; sel.appendChild(opt); }); if(old) sel.value=old; });
     }
-    function preencherSelectsTabelaPreco() {
-        const selects = ['sTabelaPreco', 'selectTabelaPreco', 'importSelectTabela'];
+    function preencherSelectsTabelaPreco(ids = ['sTabelaPreco', 'selectTabelaPreco', 'importSelectTabela', 'qrTabelaPrecoSaida', 'editTabelaPreco']) {
         const tabelas = ['empresa', 'drop']; // Adicione mais tabelas customizadas aqui
-        selects.forEach(id => {
+        ids.forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
             const oldValue = select.value;
@@ -2242,6 +2347,7 @@
     function renderRelFull() {
         const type = document.querySelector('input[name="relFullType"]:checked').value;
         document.getElementById('btnSalvarAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
+        document.getElementById('btnLimparAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
 
         if (type === 'analitico') {
             renderRelFullAnalitico_Simple();
@@ -2415,6 +2521,15 @@
       save(KEY_ALLOC, alocacoes); 
       dtInstances.relFullAnalitico.draw(false);
       showToast('Alocações salvas.', 'success');
+    }
+
+    function limparAlocacoes() {
+        showConfirmationModal('Tem certeza que deseja limpar TODAS as alocações do relatório FULL?', () => {
+            alocacoes = {};
+            save(KEY_ALLOC, alocacoes);
+            renderRelFull();
+            showToast('Alocações limpas com sucesso.', 'success');
+        });
     }
 
     function exportarPDFFull(){
@@ -2784,6 +2899,102 @@
       // Renderiza a aba ativa para garantir que os dados estejam atualizados
       showTab(activeTab);
     }
+    
+    // ===== Editor Rápido e QR Code =====
+    function bindQuickEditor() {
+        document.getElementById('btnShowNovaEntrada').addEventListener('click', () => setRightPanelState('novaEntrada'));
+        document.getElementById('btnShowNovaSaida').addEventListener('click', () => setRightPanelState('novaSaida'));
+
+        document.getElementById('formNovaEntrada').addEventListener('submit', salvarNovaEntrada);
+        document.getElementById('formNovaSaida').addEventListener('submit', salvarNovaSaida);
+
+        document.getElementById('btnScanQrEntrada').addEventListener('click', () => startQrScanner('qrProdutoEntrada'));
+        document.getElementById('btnScanQrSaida').addEventListener('click', () => startQrScanner('qrProdutoSaida'));
+        
+        // Parar a câmera quando o modal for fechado
+        document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', () => {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Falha ao parar o scanner.", err));
+            }
+        });
+    }
+
+    function setRightPanelState(state) {
+        document.getElementById('editorArea').classList.add('d-none');
+        document.getElementById('novaEntradaArea').classList.add('d-none');
+        document.getElementById('novaSaidaArea').classList.add('d-none');
+
+        if (state === 'edit') {
+            document.getElementById('editorArea').classList.remove('d-none');
+        } else if (state === 'novaEntrada') {
+            document.getElementById('novaEntradaArea').classList.remove('d-none');
+        } else if (state === 'novaSaida') {
+            document.getElementById('novaSaidaArea').classList.remove('d-none');
+        }
+    }
+
+    function startQrScanner(targetSelectId) {
+        qrScannerModal.show();
+        html5QrCode = new Html5Qrcode("qr-reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+            if (produtos.some(p => p.codigo === decodedText)) {
+                document.getElementById(targetSelectId).value = decodedText;
+                showToast(`Produto ${decodedText} selecionado!`, 'success');
+            } else {
+                showToast(`Produto com código ${decodedText} não encontrado.`, 'danger');
+            }
+            qrScannerModal.hide();
+        };
+
+        html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+            .catch(err => console.log(`Não foi possível iniciar o scanner: ${err}`));
+    }
+    
+    function salvarNovaEntrada(e) {
+        e.preventDefault();
+        const produto = document.getElementById('qrProdutoEntrada').value;
+        const quantidade = Number(document.getElementById('qrQuantidadeEntrada').value);
+        const data = document.getElementById('qrDataEntrada').value;
+        const obs = document.getElementById('qrObsEntrada').value.trim();
+        if (!produto || quantidade <= 0 || !data) { showToast('Preencha os campos corretamente.', 'danger'); return; }
+        movimentos.push({ tipo: 'entrada', produto, quantidade, data, obs });
+        save(KEY_MOVES, movimentos);
+        renderAll();
+        e.target.reset();
+        document.getElementById('qrDataEntrada').value = new Date().toISOString().slice(0, 10);
+        showToast('Entrada rápida registrada.', 'success');
+    }
+
+    function salvarNovaSaida(e) {
+        e.preventDefault();
+        const produto = document.getElementById('qrProdutoSaida').value;
+        const loja = document.getElementById('qrLojaSaida').value;
+        const tabelaPreco = document.getElementById('qrTabelaPrecoSaida').value;
+        const quantidade = Number(document.getElementById('qrQuantidadeSaida').value);
+        const data = document.getElementById('qrDataSaida').value;
+        const obs = document.getElementById('qrObsSaida').value.trim();
+
+        if (!produto || !loja || quantidade <= 0 || !data || !tabelaPreco) { showToast('Preencha todos os campos corretamente.', 'danger'); return; }
+
+        const estoque = calculaEstoqueProduto(produto);
+        const proceed = () => {
+            movimentos.push({ tipo: 'saida', produto, quantidade, data, loja, obs, tabelaPreco });
+            save(KEY_MOVES, movimentos);
+            renderAll();
+            e.target.reset();
+            document.getElementById('qrDataSaida').value = new Date().toISOString().slice(0, 10);
+            showToast('Saída rápida registrada.', 'success');
+        };
+
+        if (estoque < quantidade) {
+            showConfirmationModal(`Estoque (${estoque}) é menor que a saída (${quantidade}). Deseja confirmar mesmo assim?`, proceed);
+        } else {
+            proceed();
+        }
+    }
+
   </script>
 </body>
 </html>

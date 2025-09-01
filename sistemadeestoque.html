@@ -3,10 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel - Sistema de Controle de Estoque (v15 Tabelas de Preço)</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
-
+  <title>Painel - Sistema de Controle de Estoque (v17 - Dashboard Avançada)</title>
 
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -72,7 +69,7 @@
     }
 
     .small-muted{font-size:.88rem;color:#6c757d}
-    .report-grid{overflow:auto;max-height:56vh}
+    .report-grid{overflow-y:auto;max-height:65vh}
 
     /* Collapsed states */
     body.collapsed-left .sidebar{width:var(--sidebar-collapsed)}
@@ -95,6 +92,8 @@
         font-weight: 600;
         background-color: #f8f9fa;
     }
+    #tabelaContagem .diff-pos { color: #198754; font-weight: bold; }
+    #tabelaContagem .diff-neg { color: #dc3545; font-weight: bold; }
 
     /* Toast Notification Area */
     .toast-container { z-index: 1090; }
@@ -108,16 +107,26 @@
         text-align: center;
     }
     .dashboard-card .card-title {
-        font-size: 1rem;
+        font-size: 0.9rem;
+        font-weight: 500;
         color: #6c757d;
     }
     .dashboard-card .card-text {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 600;
         color: #0d6efd;
     }
     .dashboard-card .card-text.text-danger {
         color: #dc3545;
+    }
+     .dashboard-card .card-text.text-success {
+        color: #198754;
+    }
+    .dashboard-card .card-text.text-warning {
+        color: #ffc107;
+    }
+    .dashboard-card .card-text.text-info {
+        color: #0dcaf0;
     }
     
     /* Right Panel Hover Trigger */
@@ -146,7 +155,7 @@
     }
     @media (max-width: 576px){
       :root{ --sidebar-width:240px; --rightpanel-width:320px; }
-      .report-grid{max-height:50vh}
+      .report-grid{max-height:60vh}
       .content{padding:.75rem}
       .sidebar{padding:.75rem}
       body.sidebar-hover {
@@ -173,6 +182,7 @@
       <a class="nav-link" data-tab="saida"><i class="bi bi-box-arrow-up"></i> <span class="hide-when-collapsed">Saídas</span></a>
       <a class="nav-link" data-tab="lojas"><i class="bi bi-shop"></i> <span class="hide-when-collapsed">Lojas</span></a>
       <a class="nav-link" data-tab="tabelas-preco"><i class="bi bi-tags"></i> <span class="hide-when-collapsed">Tabelas de Preço</span></a>
+      <a class="nav-link" data-tab="contagem-estoque"><i class="bi bi-clipboard-check"></i> <span class="hide-when-collapsed">Contagem de Estoque</span></a>
       
       <!-- Menu de Relatórios Sanfonado -->
       <li class="nav-item">
@@ -207,25 +217,26 @@
                 <input type="date" id="dashFim" class="form-control form-control-sm" style="width: auto;">
             </div>
         </div>
-        <div class="row g-4">
-            <!-- Summary Cards -->
-            <div class="col-sm-6 col-lg-3">
+        
+        <!-- Row 1: Cards -->
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-8 g-4 mb-4">
+            <div class="col">
                 <div class="card dashboard-card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">Total de Produtos</h5>
-                        <p class="card-text" id="totalProdutosCard">0</p>
+                        <h5 class="card-title">Valor Estoque (Custo)</h5>
+                        <p class="card-text text-success" id="valorEstoqueCustoCard">R$ 0,00</p>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col">
                 <div class="card dashboard-card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">Total de Lojas</h5>
-                        <p class="card-text" id="totalLojasCard">0</p>
+                        <h5 class="card-title">Valor Estoque (Distrib.)</h5>
+                        <p class="card-text" id="valorEstoqueDistCard">R$ 0,00</p>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3">
+            <div class="col">
                 <div class="card dashboard-card h-100">
                     <div class="card-body">
                         <h5 class="card-title">Valor Saídas (Período)</h5>
@@ -233,43 +244,122 @@
                     </div>
                 </div>
             </div>
-             <div class="col-sm-6 col-lg-3">
-                <div class="card dashboard-card h-100">
+            <div class="col">
+                 <div class="card dashboard-card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">Produtos Estoque Baixo</h5>
-                        <p class="card-text text-danger" id="estoqueBaixoCard">0</p>
+                        <h5 class="card-title">Rotatividade Média</h5>
+                        <p class="card-text text-info" id="rotatividadeMediaCard">0 dias</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Saídas por Loja -->
-            <div class="col-lg-8">
+             <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Ticket Médio (Venda)</h5>
+                        <p class="card-text" id="ticketMedioCard">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Movimentos (Período)</h5>
+                        <p class="card-text text-warning" id="movimentosPeriodoCard">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Produtos</h5>
+                        <p class="card-text" id="totalProdutosCard">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Lojas</h5>
+                        <p class="card-text" id="totalLojasCard">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Row 2: Charts -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-7">
                 <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Vendas Diárias por Loja (Quantidade)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="vendasDiariasChart" style="min-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-5">
+                 <div class="card h-100">
                     <div class="card-header">
                         <h5 class="mb-0">Saídas por Loja (Valor Total no Período)</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="saidasPorLojaChart"></canvas>
+                        <canvas id="saidasPorLojaChart" style="min-height: 250px;"></canvas>
                     </div>
                 </div>
             </div>
-
-            <!-- Ranking de Produtos -->
-            <div class="col-lg-4">
+        </div>
+    
+        <!-- Row 3: Tables -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-6">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Top 5 Produtos com Mais Saídas (Período)</h5>
+                        <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill text-warning"></i> Sugestões de Reposição (Estoque Baixo)</h5>
                     </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush" id="rankingProdutosList">
-                           <li class="list-group-item text-muted">Nenhuma saída registrada no período.</li>
-                        </ul>
+                     <div class="card-body">
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Estoque Atual</th>
+                                        <th>Venda Média/Dia (30d)</th>
+                                        <th>Dias Restantes (Est.)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sugestoesReposicaoBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Últimos Movimentos -->
-            <div class="col-12">
+             <div class="col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-moon-stars-fill text-danger"></i> Alerta de Estoque Parado (>90 dias)</h5>
+                    </div>
+                     <div class="card-body">
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Estoque Atual</th>
+                                        <th>Dias Sem Venda</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="estoqueParadoBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Row 4: Last Movements & Top Products -->
+        <div class="row g-4">
+            <div class="col-xl-7">
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Últimos 10 Movimentos</h5>
@@ -283,14 +373,23 @@
                                         <th>Tipo</th>
                                         <th>Produto</th>
                                         <th>Qtde</th>
-                                        <th>Loja</th>
+                                        <th>Loja/Obs.</th>
                                     </tr>
                                 </thead>
-                                <tbody id="ultimosMovimentosBody">
-                                    <tr><td colspan="5" class="text-center text-muted">Nenhum movimento registrado.</td></tr>
-                                </tbody>
+                                <tbody id="ultimosMovimentosBody"></tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+             <div class="col-xl-5">
+                 <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Produtos Mais Vendidos (Período)</h5>
+                        <select id="maisVendidosLojaSelect" class="form-select form-select-sm" style="width: auto;"></select>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="rankingProdutosList"></ul>
                     </div>
                 </div>
             </div>
@@ -486,6 +585,40 @@
             </div>
         </div>
     </section>
+    
+    <!-- Contagem de Estoque -->
+    <section id="contagem-estoque" class="tab-page d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h3 class="mb-0">Contagem e Ajuste de Estoque</h3>
+        </div>
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle-fill"></i>
+            Insira a quantidade física contada para cada produto. O sistema gerará movimentos de ajuste (entrada ou saída) para corrigir as diferenças. Esta ação não pode ser desfeita.
+        </div>
+        <div class="card">
+            <div class="card-header d-flex justify-content-end">
+                <button id="btnApplyStockCount" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Aplicar Ajustes
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="tabelaContagem" class="table table-striped table-sm w-100">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Estoque (Sistema)</th>
+                                <th>Estoque Físico (Contado)</th>
+                                <th>Diferença</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Relatório Estoque -->
     <section id="relatorio-estoque" class="tab-page d-none">
@@ -594,20 +727,41 @@
 
     <!-- Import/Export -->
     <section id="importexport" class="tab-page d-none">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3 class="mb-0">Import / Export</h3></div>
-      <div class="card"><div class="card-body d-flex flex-column gap-2">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="autoBackupDownload">
-          <label class="form-check-label" for="autoBackupDownload">Baixar arquivo de backup automaticamente a cada operação</label>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3 class="mb-0">Import / Export / Manutenção</h3></div>
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-column gap-2">
+                     <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="autoBackupDownload">
+                      <label class="form-check-label" for="autoBackupDownload">Baixar arquivo de backup automaticamente a cada operação</label>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button id="exportJson" class="btn btn-outline-primary">Exportar JSON</button>
+                      <button id="exportLastAuto" class="btn btn-outline-secondary">Baixar último AutoBackup</button>
+                      <button id="importJsonBtn" class="btn btn-outline-secondary">Importar JSON</button>
+                      <input id="fileImport" type="file" accept="application/json" class="form-control" style="display:none">
+                    </div>
+                    <div class="small text-muted" id="lastAutoInfo"></div>
+                </div>
+
+                <div class="mt-4 pt-4 border-top">
+                  <h5><i class="bi bi-archive-fill"></i> Arquivar Movimentos Antigos</h5>
+                  <p class="small text-muted">
+                    Para melhorar a performance, arquive movimentos antigos. Isso calculará o saldo líquido dos movimentos até a data de corte, ajustará o estoque inicial dos produtos e removerá os movimentos antigos da lista principal, oferecendo um backup para download. Esta ação é irreversível.
+                  </p>
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                      <label for="archiveDate" class="form-label">Arquivar movimentos ANTERIORES a:</label>
+                      <input type="date" id="archiveDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                      <button id="btnArchive" class="btn btn-warning w-100">Arquivar Movimentos</button>
+                    </div>
+                  </div>
+                </div>
+
+            </div>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-          <button id="exportJson" class="btn btn-outline-primary">Exportar JSON</button>
-          <button id="exportLastAuto" class="btn btn-outline-secondary">Baixar último AutoBackup</button>
-          <button id="importJsonBtn" class="btn btn-outline-secondary">Importar JSON</button>
-          <input id="fileImport" type="file" accept="application/json" class="form-control" style="display:none">
-        </div>
-        <div class="small text-muted" id="lastAutoInfo"></div>
-      </div></div>
     </section>
   </main>
   
@@ -681,6 +835,7 @@
     const KEY_AUTOBACK = 'estoque_autobackup_v13';
     const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
     const LOW_STOCK_THRESHOLD = 10;
+    const STAGNANT_STOCK_DAYS = 90;
 
     // ===== Estruturas de Dados =====
     let produtos = load(KEY_PRODUCTS);
@@ -696,6 +851,7 @@
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
     const dtInstances = {}; // Armazena instâncias do DataTables
     let saidasPorLojaChart; // Armazena instância do Chart.js
+    let vendasDiariasChartInstance; // Armazena instância do Chart.js
 
     // Objeto de tradução para a biblioteca DataTables.
     const dtLang = {
@@ -707,7 +863,7 @@
       sLoadingRecords: "Carregando...",
       sProcessing: "Processando...",
       sZeroRecords: "Nenhum registro encontrado",
-      sSearch: "Buscar",
+      sSearch: "Buscar:",
       oPaginate: { sNext: "Próximo", sPrevious: "Anterior", sFirst: "Primeiro", sLast: "Último" },
       oAria: { sSortAscending: ": Ordenar colunas de forma ascendente", sSortDescending: ": Ordenar colunas de forma descendente" }
     };
@@ -723,7 +879,7 @@
 
       // Define datas padrão para os filtros
       const today = new Date().toISOString().slice(0,10);
-      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
+      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim', 'archiveDate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
       const past = new Date(); past.setDate(past.getDate()-30); // Padrão de 30 dias
       ['rInicio', 'dashInicio', 'reInicio', 'rsiInicio'].forEach(id => {
           const el = document.getElementById(id); if(el) el.value = past.toISOString().slice(0,10);
@@ -768,6 +924,7 @@
         case 'entrada': renderMovimentosTable('entrada'); break;
         case 'saida': renderMovimentosTable('saida'); break;
         case 'tabelas-preco': renderTabelasPreco(); break;
+        case 'contagem-estoque': renderStockCountTable(); break;
         case 'relatorio-estoque': renderRelEstoque(); break;
         case 'relatorio-full': renderRelFull(); break;
         case 'relatorio-saidas': 
@@ -871,6 +1028,8 @@
       document.getElementById('selectTabelaPreco').addEventListener('change', renderTabelasPreco);
       document.getElementById('btnSalvarTabelaPreco').addEventListener('click', salvarTabelaPreco);
       document.getElementById('formImportPrecos').addEventListener('submit', importarTabelaPrecoCSV);
+      
+      document.getElementById('btnApplyStockCount').addEventListener('click', applyStockCountAdjustments);
 
       document.getElementById('btnGerarRel').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorio(); });
       document.getElementById('btnExportRel').addEventListener('click', e=>{ e.preventDefault(); exportarCSV(); });
@@ -888,6 +1047,8 @@
       document.getElementById('exportLastAuto').addEventListener('click', baixarUltimoAutoBackup);
       document.getElementById('importJsonBtn').addEventListener('click', ()=> document.getElementById('fileImport').click());
       document.getElementById('fileImport').addEventListener('change', importarJson);
+      document.getElementById('btnArchive').addEventListener('click', archiveMovements);
+
 
       document.getElementById('formEdit').addEventListener('submit', e=>{ e.preventDefault(); salvarEdicao(); });
       document.getElementById('btnCancelEdit').addEventListener('click', e=>{ e.preventDefault(); clearEdit(); });
@@ -987,7 +1148,7 @@
         confirmationModal.show();
     }
 
-    // ===== AutoBackup =====
+    // ===== AutoBackup e Arquivamento =====
     function autoBackup(trigger=''){
       const payload = { when: new Date().toISOString(), trigger, data: buildDataObject() };
       localStorage.setItem(KEY_AUTOBACK, JSON.stringify(payload));
@@ -1011,6 +1172,50 @@
         info.textContent = `Último AutoBackup: ${new Date(p.when).toLocaleString()} (trigger: ${p.trigger||'desconhecido'})`;
       }catch{ info.textContent = 'AutoBackup inválido.'; }
     }
+
+    function archiveMovements() {
+        const cutoffDate = document.getElementById('archiveDate').value;
+        if (!cutoffDate) {
+            showToast('Por favor, selecione uma data de corte.', 'warning');
+            return;
+        }
+
+        const toArchive = movimentos.filter(m => m.data < cutoffDate);
+        if (toArchive.length === 0) {
+            showToast('Nenhum movimento encontrado antes da data selecionada para arquivar.', 'info');
+            return;
+        }
+
+        showConfirmationModal(`Você está prestes a arquivar ${toArchive.length} movimentos anteriores a ${new Date(cutoffDate + 'T12:00:00').toLocaleDateString()}. O estoque inicial dos produtos será ajustado permanentemente. Esta ação não pode ser desfeita. Deseja continuar?`, () => {
+            const toKeep = movimentos.filter(m => m.data >= cutoffDate);
+            const netImpact = {};
+
+            toArchive.forEach(m => {
+                netImpact[m.produto] = netImpact[m.produto] || 0;
+                if (m.tipo === 'entrada') {
+                    netImpact[m.produto] += m.quantidade;
+                } else if (m.tipo === 'saida') {
+                    netImpact[m.produto] -= m.quantidade;
+                }
+            });
+
+            produtos.forEach(p => {
+                if (netImpact[p.codigo]) {
+                    p.estoque_inicial = (p.estoque_inicial || 0) + netImpact[p.codigo];
+                }
+            });
+
+            movimentos = toKeep;
+            save(KEY_PRODUCTS, produtos);
+            save(KEY_MOVES, movimentos);
+
+            downloadBlob(JSON.stringify(toArchive, null, 2), 'application/json', `movimentos_arquivados_ate_${cutoffDate}.json`);
+
+            showToast('Movimentos arquivados e estoque inicial atualizado com sucesso! O backup foi baixado.', 'success');
+            renderAll();
+        });
+    }
+
 
     // ===== CRUD e Lógicas de Negócio =====
     // Produtos
@@ -1055,6 +1260,18 @@
       let estoque = Number(p.estoque_inicial||0);
       movimentos.forEach(m=>{ if(m.produto===codigo){ if(m.tipo==='entrada') estoque += m.quantidade; else if(m.tipo==='saida') estoque -= m.quantidade; } });
       return estoque;
+    }
+    function calculaEstoqueProdutoAteData(codigo, dataFim) {
+        const p = produtos.find(x => x.codigo === codigo);
+        if (!p) return 0;
+        let estoque = Number(p.estoque_inicial || 0);
+        movimentos.forEach(m => {
+            if (m.produto === codigo && m.data <= dataFim) {
+                if (m.tipo === 'entrada') estoque += m.quantidade;
+                else if (m.tipo === 'saida') estoque -= m.quantidade;
+            }
+        });
+        return estoque;
     }
     function calculaMovimentosProduto(codigo) {
         let totalEntradas = 0;
@@ -1288,34 +1505,229 @@
     function renderDashboard() {
         const inicio = document.getElementById('dashInicio').value;
         const fim = document.getElementById('dashFim').value;
-        
-        // Cards
+        if (!inicio || !fim || inicio > fim) return;
+        const diasNoPeriodo = (new Date(fim) - new Date(inicio)) / (1000 * 60 * 60 * 24) + 1;
+
+        // --- CARDS ---
         document.getElementById('totalProdutosCard').textContent = produtos.length;
         document.getElementById('totalLojasCard').textContent = lojas.length;
-        
-        const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
-        document.getElementById('estoqueBaixoCard').textContent = produtosBaixoEstoque.length;
 
-        const saidasFiltradas = movimentos.filter(m => m.tipo === 'saida' && m.data >= inicio && m.data <= fim);
-        const valorTotalSaidas = saidasFiltradas.reduce((acc, s) => {
+        let totalValorCusto = 0;
+        let totalValorDist = 0;
+        produtos.forEach(p => {
+            const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            totalValorCusto += estoqueAtual * (p.custo || 0);
+            totalValorDist += estoqueAtual * (p.dist || 0);
+        });
+        document.getElementById('valorEstoqueCustoCard').textContent = totalValorCusto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        document.getElementById('valorEstoqueDistCard').textContent = totalValorDist.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        const movimentosFiltrados = movimentos.filter(m => m.data >= inicio && m.data <= fim);
+        const saidasFiltradasPeriodo = movimentosFiltrados.filter(m => m.tipo === 'saida');
+        
+        document.getElementById('movimentosPeriodoCard').textContent = movimentosFiltrados.length;
+        
+        const valorTotalSaidas = saidasFiltradasPeriodo.reduce((acc, s) => {
             return acc + (s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco));
         }, 0);
         document.getElementById('valorSaidasPeriodoCard').textContent = valorTotalSaidas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+        const ticketMedio = saidasFiltradasPeriodo.length > 0 ? valorTotalSaidas / saidasFiltradasPeriodo.length : 0;
+        document.getElementById('ticketMedioCard').textContent = ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        // Gráfico Saídas por Loja
+
+        // --- Card: Rotatividade Média ---
+        let totalDiasRotatividade = 0;
+        let produtosComVenda = 0;
+        const diaAnteriorInicio = new Date(inicio + 'T12:00:00');
+        diaAnteriorInicio.setDate(diaAnteriorInicio.getDate() - 1);
+        const dataAnteriorInicio = diaAnteriorInicio.toISOString().slice(0, 10);
+        
+        produtos.forEach(p => {
+            const vendasNoPeriodo = saidasFiltradasPeriodo
+                .filter(s => s.produto === p.codigo)
+                .reduce((sum, s) => sum + s.quantidade, 0);
+
+            if (vendasNoPeriodo > 0) {
+                const estoqueInicio = calculaEstoqueProdutoAteData(p.codigo, dataAnteriorInicio);
+                const estoqueFim = calculaEstoqueProdutoAteData(p.codigo, fim);
+                const estoqueMedio = (estoqueInicio + estoqueFim) / 2;
+
+                if (estoqueMedio > 0) {
+                    const rotatividade = vendasNoPeriodo / estoqueMedio;
+                    if(rotatividade > 0) {
+                        const diasDeRotatividade = diasNoPeriodo / rotatividade;
+                        totalDiasRotatividade += diasDeRotatividade;
+                        produtosComVenda++;
+                    }
+                }
+            }
+        });
+
+        const rotatividadeMedia = produtosComVenda > 0 ? (totalDiasRotatividade / produtosComVenda) : 0;
+        document.getElementById('rotatividadeMediaCard').textContent = `${rotatividadeMedia.toFixed(1)} dias`;
+        
+        // --- Chart: Vendas Diárias por Loja ---
+        const vendasDiariasData = {};
+        const dates = []; 
+        let d = new Date(inicio  + 'T12:00:00'); 
+        const end = new Date(fim  + 'T12:00:00');
+        while(d <= end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+
+        saidasFiltradasPeriodo.forEach(s => {
+            if (!vendasDiariasData[s.loja]) {
+                vendasDiariasData[s.loja] = {};
+            }
+            vendasDiariasData[s.loja][s.data] = (vendasDiariasData[s.loja][s.data] || 0) + s.quantidade;
+        });
+        
+        const colors = ['#0d6efd', '#dc3545', '#198754', '#ffc107', '#0dcaf0', '#6f42c1', '#fd7e14', '#20c997'];
+        const datasetsVendasDiarias = lojas.map((loja, i) => {
+            return {
+                label: loja.nome,
+                data: dates.map(date => vendasDiariasData[loja.codigo]?.[date] || 0),
+                borderColor: colors[i % colors.length],
+                tension: 0.1,
+                fill: false
+            }
+        });
+
+        const ctxVendas = document.getElementById('vendasDiariasChart').getContext('2d');
+        if (vendasDiariasChartInstance) {
+            vendasDiariasChartInstance.destroy();
+        }
+        vendasDiariasChartInstance = new Chart(ctxVendas, {
+            type: 'line',
+            data: {
+                labels: dates.map(d => new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
+                datasets: datasetsVendasDiarias
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // --- Tabela: Sugestões de Reposição ---
+        const sugestoesBody = document.getElementById('sugestoesReposicaoBody');
+        sugestoesBody.innerHTML = '';
+        const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
+        
+        if (produtosBaixoEstoque.length > 0) {
+            produtosBaixoEstoque.forEach(p => {
+                const trintaDiasAtras = new Date();
+                trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+                const data30dias = trintaDiasAtras.toISOString().slice(0,10);
+
+                const vendasUltimos30d = movimentos
+                    .filter(m => m.tipo === 'saida' && m.produto === p.codigo && m.data >= data30dias)
+                    .reduce((sum, s) => sum + s.quantidade, 0);
+                
+                const vendaMediaDiaria = vendasUltimos30d / 30;
+                const estoqueAtual = calculaEstoqueProduto(p.codigo);
+                const diasRestantes = vendaMediaDiaria > 0 ? (estoqueAtual / vendaMediaDiaria).toFixed(1) : '∞';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.codigo} - ${truncateText(p.nome, 25)}</td>
+                    <td class="text-danger fw-bold">${estoqueAtual}</td>
+                    <td>${vendaMediaDiaria.toFixed(2)}</td>
+                    <td>${diasRestantes}</td>
+                `;
+                sugestoesBody.appendChild(tr);
+            });
+        }
+        if (sugestoesBody.children.length === 0) {
+            sugestoesBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum produto com estoque baixo.</td></tr>';
+        }
+
+        // --- Tabela: Alerta de Estoque Parado ---
+        const hoje = new Date();
+        const stagnantProducts = [];
+        produtos.forEach(p => {
+            const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            if(estoqueAtual > 0) {
+                const lastSale = movimentos
+                    .filter(m => m.tipo === 'saida' && m.produto === p.codigo)
+                    .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+
+                let diasSemVenda = Infinity;
+                if(lastSale) {
+                    diasSemVenda = Math.floor((hoje - new Date(lastSale.data + 'T12:00:00')) / (1000 * 60 * 60 * 24));
+                }
+                
+                if (diasSemVenda > STAGNANT_STOCK_DAYS) {
+                    stagnantProducts.push({
+                        nome: p.nome, codigo: p.codigo, estoque: estoqueAtual, dias: diasSemVenda
+                    });
+                }
+            }
+        });
+        stagnantProducts.sort((a,b) => b.dias - a.dias);
+        const stagnantBody = document.getElementById('estoqueParadoBody');
+        stagnantBody.innerHTML = '';
+        if(stagnantProducts.length > 0) {
+             stagnantProducts.forEach(p => {
+                 const tr = document.createElement('tr');
+                 tr.innerHTML = `
+                    <td>${p.codigo} - ${truncateText(p.nome, 25)}</td>
+                    <td>${p.estoque}</td>
+                    <td class="text-danger fw-bold">${p.dias}</td>
+                 `;
+                 stagnantBody.appendChild(tr);
+             });
+        } else {
+             stagnantBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum produto com estoque parado.</td></tr>';
+        }
+
+        // --- Tabela: Produtos Mais Vendidos por Loja ---
+        const lojaSelect = document.getElementById('maisVendidosLojaSelect');
+        const currentSelectedLoja = lojaSelect.value;
+        lojaSelect.innerHTML = '';
+        lojas.forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l.codigo;
+            opt.textContent = l.nome;
+            lojaSelect.appendChild(opt);
+        });
+        if (currentSelectedLoja && lojas.some(l => l.codigo === currentSelectedLoja)) {
+            lojaSelect.value = currentSelectedLoja;
+        }
+        $('#maisVendidosLojaSelect').off('change').on('change', renderDashboard);
+        
+        const selectedLoja = lojaSelect.value || (lojas[0] ? lojas[0].codigo : '');
+        const ranking = {};
+        saidasFiltradasPeriodo
+            .filter(s => s.loja === selectedLoja)
+            .forEach(s => {
+                ranking[s.produto] = (ranking[s.produto] || 0) + s.quantidade;
+            });
+
+        const sortedRanking = Object.entries(ranking).sort(([, a], [, b]) => b - a).slice(0, 5);
+        const rankingList = document.getElementById('rankingProdutosList');
+        rankingList.innerHTML = '';
+        if (sortedRanking.length === 0) {
+            rankingList.innerHTML = '<li class="list-group-item text-muted">Nenhuma saída para esta loja no período.</li>';
+        } else {
+            sortedRanking.forEach(([codigo, qtde]) => {
+                const prod = produtos.find(p => p.codigo === codigo);
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.textContent = prod ? `${prod.codigo} - ${truncateText(prod.nome, 25)}` : `[${codigo}]`;
+                li.innerHTML += `<span class="badge bg-primary rounded-pill">${qtde}</span>`;
+                rankingList.appendChild(li);
+            });
+        }
+        
+        // --- Gráfico: Saídas por Loja (Valor) ---
         const saidasPorLoja = lojas.map(loja => {
-            const valor = saidasFiltradas
+            const valor = saidasFiltradasPeriodo
                 .filter(s => s.loja === loja.codigo)
                 .reduce((acc, s) => acc + (s.quantidade * getEffectivePrice(s.produto, s.tabelaPreco)), 0);
             return { nome: loja.nome, valor };
         });
-
-        const ctx = document.getElementById('saidasPorLojaChart').getContext('2d');
+        const ctxSaidas = document.getElementById('saidasPorLojaChart').getContext('2d');
         if (saidasPorLojaChart) {
             saidasPorLojaChart.destroy();
         }
-        saidasPorLojaChart = new Chart(ctx, {
+        saidasPorLojaChart = new Chart(ctxSaidas, {
             type: 'bar',
             data: {
                 labels: saidasPorLoja.map(l => l.nome),
@@ -1330,42 +1742,15 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
             }
         });
 
-        // Ranking de Produtos
-        const ranking = {};
-        saidasFiltradas.forEach(s => {
-            ranking[s.produto] = (ranking[s.produto] || 0) + s.quantidade;
-        });
-        const sortedRanking = Object.entries(ranking).sort(([,a],[,b]) => b-a).slice(0, 5);
-        
-        const rankingList = document.getElementById('rankingProdutosList');
-        rankingList.innerHTML = '';
-        if (sortedRanking.length === 0) {
-            rankingList.innerHTML = '<li class="list-group-item text-muted">Nenhuma saída registrada no período.</li>';
-        } else {
-            sortedRanking.forEach(([codigo, qtde]) => {
-                const prod = produtos.find(p => p.codigo === codigo);
-                const li = document.createElement('li');
-                li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                li.textContent = prod ? `${prod.codigo} - ${truncateText(prod.nome, 25)}` : `[${codigo}]`;
-                li.innerHTML += `<span class="badge bg-primary rounded-pill">${qtde}</span>`;
-                rankingList.appendChild(li);
-            });
-        }
-
-        // Últimos Movimentos
+        // --- Tabela: Últimos Movimentos ---
         const ultimosMovimentosBody = document.getElementById('ultimosMovimentosBody');
         ultimosMovimentosBody.innerHTML = '';
         const ultimos = [...movimentos].sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 10);
-
         if (ultimos.length === 0) {
             ultimosMovimentosBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum movimento registrado.</td></tr>';
         } else {
@@ -1373,16 +1758,14 @@
                 const prod = produtos.find(p => p.codigo === m.produto);
                 const loja = m.tipo === 'saida' ? lojas.find(l => l.codigo === m.loja) : null;
                 const tr = document.createElement('tr');
-                const tipoBadge = m.tipo === 'entrada' 
-                    ? `<span class="badge bg-success">Entrada</span>` 
-                    : `<span class="badge bg-danger">Saída</span>`;
+                const tipoBadge = m.tipo === 'entrada' ? `<span class="badge bg-success">Entrada</span>` : `<span class="badge bg-danger">Saída</span>`;
 
                 tr.innerHTML = `
                     <td>${new Date(m.data + 'T12:00:00').toLocaleDateString()}</td>
                     <td>${tipoBadge}</td>
                     <td>${prod ? truncateText(prod.nome, 30) : `[${m.produto}]`}</td>
                     <td>${m.quantidade}</td>
-                    <td>${loja ? loja.nome : '-'}</td>
+                    <td>${loja ? loja.nome : (m.obs || '-')}</td>
                 `;
                 ultimosMovimentosBody.appendChild(tr);
             });
@@ -1858,83 +2241,110 @@
         document.getElementById('btnSalvarAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
 
         if (type === 'analitico') {
-            renderRelFullAnalitico();
+            renderRelFullAnalitico_Simple();
         } else {
             renderRelFullSintetico();
         }
     }
+    
+    function renderRelFullAnalitico_Simple(){
+        const container = document.getElementById('relFull');
+        container.innerHTML = '';
+        if (produtos.length === 0 || lojas.length === 0) {
+            container.innerHTML = '<div class="text-muted">Cadastre produtos e lojas para usar o relatório FULL.</div>';
+            return;
+        }
 
-    function renderRelFullAnalitico(){
-      const container=document.getElementById('relFull'); container.innerHTML='';
-      if(produtos.length===0 || lojas.length===0){ container.innerHTML = '<div class="text-muted">Cadastre produtos e lojas para usar o relatório FULL.</div>'; return; }
-      
-      const table=document.createElement('table');
-      table.className='table table-bordered table-striped table-sm w-100';
-      table.id='tRelFullAnalitico';
-
-      const thead=table.createTHead();
-      const trh=thead.insertRow();
-      trh.innerHTML = '<th>Produto</th>' + lojas.map(l=>`<th>${l.nome}</th>`).join('') + '<th>Total Qtde</th><th>Total Prod (R$)</th>';
-
-      const tbody=table.createTBody();
-      const columnTotals = new Array(lojas.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
-      let grandTotalQtde = 0;
-      let grandTotalValor = 0;
-
-      produtos.forEach(p=>{
-        const tr=tbody.insertRow();
-        tr.insertCell().textContent = `${p.codigo} - ${p.nome}`;
-        let totalProdQtde = 0;
-        let totalProdValor = 0;
+        const tableHTML = `
+            <table class="table table-bordered table-striped table-sm w-100" id="tRelFullAnalitico">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        ${lojas.map(l => `<th>${l.nome}</th>`).join('')}
+                        <th>Total Qtde</th>
+                        <th>Total Prod (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${produtos.map(p => `
+                        <tr>
+                            <td>${p.codigo} - ${p.nome}</td>
+                            ${lojas.map(l => `
+                                <td>
+                                    <input type="number" min="0" class="form-control form-control-sm" 
+                                           value="${getAlloc(l.codigo, p.codigo)}" 
+                                           data-loja="${l.codigo}" data-produto="${p.codigo}">
+                                </td>
+                            `).join('')}
+                            <td></td> <!-- Placeholder for Total Qtde -->
+                            <td></td> <!-- Placeholder for Total Prod (R$) -->
+                        </tr>
+                    `).join('')}
+                </tbody>
+                 <tfoot>
+                    <tr>
+                        <th>TOTAIS</th>
+                        ${lojas.map(() => '<th></th>').join('')}
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        container.innerHTML = tableHTML;
         
-        lojas.forEach((l, index)=>{
-          const td = tr.insertCell();
-          const qtd = getAlloc(l.codigo, p.codigo);
-          const input = document.createElement('input');
-          input.type='number'; input.min='0'; input.className='form-control form-control-sm'; input.value = qtd;
-          input.dataset.loja = l.codigo; input.dataset.produto = p.codigo;
-          td.appendChild(input);
-          
-          const valor = qtd * Number(p.dist||0);
-          totalProdQtde += qtd;
-          totalProdValor += valor;
-          columnTotals[index].qtde += qtd;
-          columnTotals[index].valor += valor;
+        if (dtInstances.relFullAnalitico) dtInstances.relFullAnalitico.destroy();
+        dtInstances.relFullAnalitico = new DataTable('#tRelFullAnalitico', {
+            paging: true, searching: true, info: true, ordering: true, responsive: true, language: dtLang,
+            pageLength: 10, lengthMenu: [10, 25, 50, -1],
+             columnDefs: [ { orderable: false, targets: Array.from({length: lojas.length + 2}, (_, i) => i + 1) } ],
+            "footerCallback": function ( row, data, start, end, display ) {
+                const api = this.api();
+                const columnTotals = new Array(lojas.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
+                let grandTotalQtde = 0;
+                let grandTotalValor = 0;
+                
+                api.column(0, {search:'applied'}).data().each( function ( group, i ) {
+                    const productCode = group.split(' - ')[0];
+                    const prod = produtos.find(p => p.codigo === productCode);
+                    if (!prod) return;
+                    
+                    let totalProdQtde = 0;
+                    
+                    lojas.forEach((l, index) => {
+                        const input = $(api.row(i).node()).find(`input[data-produto="${productCode}"][data-loja="${l.codigo}"]`);
+                        const qtd = parseInt(input.val(), 10) || 0;
+                        columnTotals[index].qtde += qtd;
+                        columnTotals[index].valor += qtd * (prod.dist || 0);
+                        totalProdQtde += qtd;
+                    });
+
+                    const totalProdValor = totalProdQtde * (prod.dist || 0);
+                    grandTotalQtde += totalProdQtde;
+                    grandTotalValor += totalProdValor;
+                    
+                    const node = api.row(i).node();
+                    $(node).find('td').eq(lojas.length + 1).html(totalProdQtde);
+                    $(node).find('td').eq(lojas.length + 2).html(`R$ ${totalProdValor.toFixed(2)}`);
+                });
+
+                // Update footer
+                const footer = $(api.table().footer()).find('tr');
+                footer.find('th').eq(0).html('TOTAIS');
+                lojas.forEach((l, i) => {
+                    footer.find('th').eq(i+1).html(`${columnTotals[i].qtde}<br><small>R$ ${columnTotals[i].valor.toFixed(2)}</small>`);
+                });
+                footer.find('th').eq(lojas.length + 1).html(grandTotalQtde);
+                footer.find('th').eq(lojas.length + 2).html(`R$ ${grandTotalValor.toFixed(2)}`);
+            }
         });
-
-        tr.insertCell().textContent = totalProdQtde;
-        tr.insertCell().textContent = `R$ ${totalProdValor.toFixed(2)}`;
-        grandTotalQtde += totalProdQtde;
-        grandTotalValor += totalProdValor;
-      });
-
-      const tfoot = table.createTFoot();
-      const trf = tfoot.insertRow();
-      trf.insertCell().outerHTML = '<th>TOTAIS</th>';
-      columnTotals.forEach(total => {
-          const th = document.createElement('th');
-          th.innerHTML = `${total.qtde}<br><small>R$ ${total.valor.toFixed(2)}</small>`;
-          trf.appendChild(th);
-      });
-      trf.insertCell().outerHTML = `<th>${grandTotalQtde}</th>`;
-      trf.insertCell().outerHTML = `<th>R$ ${grandTotalValor.toFixed(2)}</th>`;
-
-      container.appendChild(table);
-      if(dtInstances.relFullAnalitico) dtInstances.relFullAnalitico.destroy();
-      dtInstances.relFullAnalitico = new DataTable('#tRelFullAnalitico', {
-          paging: true,
-          searching: true,
-          info: true,
-          ordering: true,
-          responsive: true,
-          language: dtLang,
-          pageLength: 10,
-          lengthMenu: [10, 25, 50, -1],
-          columnDefs: [
-              { "orderable": false, "targets": Array.from({length: lojas.length + 2}, (_, i) => i + 1) }
-          ]
-      });
+        
+        // Trigger calculation on input change
+        $('#tRelFullAnalitico tbody').on('change', 'input', function () {
+            dtInstances.relFullAnalitico.draw(false);
+        });
     }
+
 
     function renderRelFullSintetico() {
         const container=document.getElementById('relFull'); container.innerHTML='';
@@ -1993,14 +2403,14 @@
 
 
     function salvarAlocacoesFromGrid(){
-      const inputs = document.querySelectorAll('#tRelFullAnalitico input[type="number"]');
-      if (inputs.length === 0) {
+      const allInputs = document.querySelectorAll('#tRelFullAnalitico input[type="number"][data-produto]');
+      if (allInputs.length === 0) {
           showToast('Mude para o modo Analítico para editar as alocações.', 'info');
           return;
       }
-      inputs.forEach(inp=> setAlloc(inp.dataset.loja, inp.dataset.produto, Number(inp.value||0)));
+      allInputs.forEach(inp=> setAlloc(inp.dataset.loja, inp.dataset.produto, Number(inp.value||0)));
       save(KEY_ALLOC, alocacoes); 
-      renderRelFull(); 
+      dtInstances.relFullAnalitico.draw(false);
       showToast('Alocações salvas.', 'success');
     }
 
@@ -2204,7 +2614,7 @@
                 renderTabelasPreco();
             }
         };
-        reader.readAsText(f);
+        reader.readAsText(file);
     }
     
     function getEffectivePrice(productCode, tableName = 'empresa') {
@@ -2215,6 +2625,79 @@
             return parseFloat(priceTables[tableName][productCode]);
         }
         return prod.dist || 0;
+    }
+    
+    // ===== Contagem de Estoque =====
+    function renderStockCountTable() {
+        const data = produtos.map(p => {
+            const estoqueSistema = calculaEstoqueProduto(p.codigo);
+            return {
+                codigo: p.codigo,
+                nome: p.nome,
+                estoque_sistema: `<span data-sistema-estoque="${estoqueSistema}">${estoqueSistema}</span>`,
+                estoque_contado: `<input type="number" min="0" class="form-control form-control-sm" data-codigo-produto="${p.codigo}">`,
+                diferenca: `<span class="diff-val"></span>`
+            }
+        });
+
+        updateDataTable(dtInstances.contagem, data);
+
+        // Add event listener for real-time difference calculation
+        $('#tabelaContagem tbody').off('input').on('input', 'input[type="number"]', function() {
+            const row = $(this).closest('tr');
+            const sistema = parseInt(row.find('[data-sistema-estoque]').data('sistema-estoque'), 10);
+            const contado = parseInt($(this).val(), 10) || 0;
+            const diff = contado - sistema;
+            const diffCell = row.find('.diff-val');
+            diffCell.text(diff);
+            diffCell.removeClass('diff-pos diff-neg');
+            if (diff > 0) diffCell.addClass('diff-pos').text(`+${diff}`);
+            else if (diff < 0) diffCell.addClass('diff-neg');
+        });
+    }
+
+    function applyStockCountAdjustments() {
+        const rows = document.querySelectorAll('#tabelaContagem tbody tr');
+        const adjustments = [];
+        const today = new Date().toISOString().slice(0, 10);
+
+        rows.forEach(row => {
+            const input = row.querySelector('input[type="number"]');
+            if (!input.value) return; // Skip rows not filled
+            
+            const estoqueContado = parseInt(input.value, 10);
+            const estoqueSistema = parseInt(row.querySelector('[data-sistema-estoque]').dataset.sistemaEstoque, 10);
+            const produtoCodigo = input.dataset.codigoProduto;
+            
+            if (!isNaN(estoqueContado) && estoqueContado !== estoqueSistema) {
+                adjustments.push({
+                    produto: produtoCodigo,
+                    diferenca: estoqueContado - estoqueSistema,
+                    sistema: estoqueSistema,
+                    contado: estoqueContado
+                });
+            }
+        });
+
+        if (adjustments.length === 0) {
+            showToast('Nenhuma diferença de estoque para ajustar.', 'info');
+            return;
+        }
+
+        showConfirmationModal(`Você está prestes a criar ${adjustments.length} movimento(s) de ajuste de estoque. Esta ação não pode ser desfeita. Deseja continuar?`, () => {
+            adjustments.forEach(adj => {
+                const obs = `Ajuste de contagem. Sistema: ${adj.sistema}, Contado: ${adj.contado}`;
+                if (adj.diferenca > 0) {
+                    movimentos.push({ tipo: 'entrada', produto: adj.produto, quantidade: adj.diferenca, data: today, obs });
+                } else {
+                    // Saída de ajuste não tem loja nem tabela de preço
+                    movimentos.push({ tipo: 'saida', produto: adj.produto, quantidade: Math.abs(adj.diferenca), data: today, obs, loja: null, tabelaPreco: null });
+                }
+            });
+            save(KEY_MOVES, movimentos);
+            showToast(`${adjustments.length} ajuste(s) de estoque aplicado(s) com sucesso.`, 'success');
+            renderAll();
+        });
     }
 
 
@@ -2251,16 +2734,18 @@
             ]
         });
         dtInstances.tabelaPrecos = new DataTable('#tabelaPrecosCustom', {
-             responsive: true,
-             language: dtLang,
-             pageLength: 10,
-             lengthMenu: [10,25,50,100],
-             ordering: false,
+             responsive: true, language: dtLang, pageLength: 10, lengthMenu: [10,25,50,100], ordering: false,
              columns: [
-                 { data: 'codigo' },
-                 { data: 'nome' },
-                 { data: 'precoPadrao' },
+                 { data: 'codigo' }, { data: 'nome' }, { data: 'precoPadrao' },
                  { data: 'precoCustom', orderable: false, searchable: false }
+             ]
+        });
+         dtInstances.contagem = new DataTable('#tabelaContagem', {
+             responsive: true, language: dtLang, pageLength: 10, lengthMenu: [10, 25, 50, -1], ordering: true,
+             columns: [
+                 { data: 'codigo' }, { data: 'nome' }, { data: 'estoque_sistema', searchable: false },
+                 { data: 'estoque_contado', orderable: false, searchable: false },
+                 { data: 'diferenca', orderable: false, searchable: false }
              ]
         });
     }
@@ -2299,4 +2784,3 @@
   </script>
 </body>
 </html>
-

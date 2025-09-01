@@ -72,18 +72,16 @@
         <label for="password">Senha</label>
       </div>
 
-      <button class="w-100 btn btn-lg btn-primary" type="submit">Entrar</button>
+      <button class="w-100 btn btn-lg btn-primary mb-2" type="submit">Entrar</button>
+      <button class="w-100 btn btn-lg btn-success" type="button" onclick="criarConta()">Criar Conta</button>
+
       <p class="mt-4 mb-0 text-muted">&copy; 2025 E-COMPRE</p>
     </form>
   </main>
 
   <script>
     function login(event) {
-      event.preventDefault(); // impede reload do form
-
-      const usuarioCorreto = "victor";
-      const emailCorreto = "e-compre@gmail.com";
-      const senhaCorreta = "1234";
+      event.preventDefault(); // impede reload
 
       let usuario = document.getElementById("user").value.trim();
       let email = document.getElementById("email").value.trim();
@@ -94,11 +92,47 @@
         return;
       }
 
-      if (usuario === usuarioCorreto && email === emailCorreto && senha === senhaCorreta) {
+      // Recupera logins do localStorage
+      let usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+
+      // Verifica se existe usuário cadastrado
+      let encontrado = usuarios.find(u => u.usuario === usuario && u.email === email && u.senha === senha);
+
+      if (encontrado) {
         window.location.href = "sistemadeestoque.html";
       } else {
         alert("❌ Usuário, e-mail ou senha incorretos!");
       }
+    }
+
+    function criarConta() {
+      let usuario = document.getElementById("user").value.trim();
+      let email = document.getElementById("email").value.trim();
+      let senha = document.getElementById("password").value;
+
+      if (usuario === "" || email === "" || senha === "") {
+        alert("⚠️ Preencha todos os campos para criar a conta!");
+        return;
+      }
+
+      // Recupera usuários existentes
+      let usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+
+      // Verifica se já existe
+      let existe = usuarios.find(u => u.usuario === usuario || u.email === email);
+      if (existe) {
+        alert("⚠️ Usuário ou e-mail já cadastrados!");
+        return;
+      }
+
+      // Adiciona novo usuário
+      usuarios.push({ usuario, email, senha });
+      localStorage.setItem("usuarios", JSON.stringify(usuarios));
+
+      alert("✅ Conta criada com sucesso! Agora você pode entrar.");
+      document.getElementById("user").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("password").value = "";
     }
   </script>
 

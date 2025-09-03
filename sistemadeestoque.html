@@ -1702,7 +1702,8 @@
         const instanceName = type === 'entrada' ? 'entradas' : 'saidas';
 
         const movimentosFiltrados = movimentos.map((m, index) => ({...m, originalIndex: index}))
-                                             .filter(m => m.tipo === type);
+                                             .filter(m => m.tipo === type)
+                                             .sort((a, b) => new Date(b.data) - new Date(a.data));
 
         const data = movimentosFiltrados.map(m => {
             const prod = produtos.find(p => p.codigo === m.produto);

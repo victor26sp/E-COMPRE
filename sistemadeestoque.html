@@ -3,9 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel - Sistema de Controle de Estoque (v17 - Dashboard Avançada)</title>
+  <title>Painel - Sistema de Controle de Estoque (v20 - Central de Notificações)</title>
   <!-- Favicon -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
 
   <!-- Bootstrap 5 -->
@@ -16,14 +15,80 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.4/r-3.0.2/datatables.min.css">
 
   <style>
-    :root{
-      --sidebar-width:280px;
-      --sidebar-collapsed:68px;
-      --rightpanel-width:360px;
-      --btn-gray:#6c757d;
+    :root {
+        --sidebar-width: 280px;
+        --rightpanel-width: 360px;
+        --header-height: 60px;
+        --bs-primary-rgb: 13, 110, 253;
+        --bs-body-bg: #f5f7fb;
+        --bs-body-color: #212529;
+        --bs-border-color: #dee2e6;
+        --card-bg: #ffffff;
+        --card-border-color: #e9ecef;
+        --table-striped-bg: rgba(0, 0, 0, 0.02);
+        --modal-bg: #ffffff;
+        --input-bg: #fff;
     }
-    html, body{height:100%}
-    body{overflow:hidden;background:#f5f7fb}
+
+    body.dark-mode {
+        --bs-body-bg: #1c1c1e;
+        --bs-body-color: #f0f0f0;
+        --bs-border-color: #3a3a3c;
+        --card-bg: #2c2c2e;
+        --card-border-color: #3a3a3c;
+        --table-striped-bg: rgba(255, 255, 255, 0.04);
+        --modal-bg: #2c2c2e;
+        --input-bg: #3a3a3c;
+
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            color: var(--bs-body-color);
+            border-color: #555;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            color: var(--bs-body-color);
+            border-color: #86b7fe;
+        }
+        .table {
+            --bs-table-color: var(--bs-body-color);
+            --bs-table-border-color: var(--bs-border-color);
+            --bs-table-striped-bg: var(--table-striped-bg);
+            --bs-table-hover-bg: rgba(255,255,255,0.07);
+        }
+        .modal-content {
+            background-color: var(--modal-bg);
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--card-border-color);
+        }
+        .list-group-item {
+            background-color: transparent;
+            border-color: var(--bs-border-color);
+        }
+        .bg-light {
+           background-color: #3a3a3c !important;
+        }
+        .text-muted {
+            color: #999 !important;
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        .dropdown-menu {
+            background-color: #3a3a3c;
+            border-color: #555;
+        }
+        .dropdown-item {
+            color: #f0f0f0;
+        }
+        .dropdown-item:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+    }
+    html, body{height:100%; background-color: var(--bs-body-bg); color: var(--bs-body-color);}
+    body{overflow:hidden;}
 
     /* Sidebar (left) */
     .sidebar{
@@ -33,74 +98,82 @@
       background:#0d6efd;
       color:#fff;
       padding:1rem .75rem;
-      transition:width .2s ease;
-      z-index:1030;
+      transition: transform .2s ease;
+      transform: translateX(calc(-1 * var(--sidebar-width)));
+      z-index:1032;
       box-shadow:0 0 12px rgba(0,0,0,.08);
+    }
+    body.sidebar-visible .sidebar {
+        transform: translateX(0);
     }
     .sidebar .brand h4{font-weight:600}
     .sidebar .nav-link{color:#fff;border-radius:.5rem;padding:.55rem .75rem;margin:.125rem 0}
     .sidebar .nav-link:hover{background:rgba(255,255,255,.12)}
     .sidebar .nav-link.active{background:rgba(255,255,255,.22)}
     .sidebar .brand .toggle-inline{display:flex;gap:.5rem;align-items:center}
-    .sidebar .hide-when-collapsed{transition:opacity .2s ease}
-    .sidebar .brand{margin-bottom:.5rem}
 
-    /* Submenu de Relatórios */
-    .sidebar .nav-item .collapse .nav-link, .sidebar .nav-item .collapsing .nav-link {
-        padding-left: 2.5rem;
-        font-size: 0.9rem;
-        background: rgba(0,0,0,0.1);
+    /* Content Area */
+    .content{margin-left: 0; padding-top: var(--header-height); height:100vh;overflow:auto;padding: calc(var(--header-height) + 1rem) 1.25rem 1rem 1.25rem; transition: margin-left .2s ease, margin-right .2s ease}
+    
+    /* Header */
+    .app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--header-height);
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--bs-border-color);
+        z-index: 1025;
+        display: flex;
+        align-items: center;
+        padding: 0 1.25rem;
+        transition: margin-left .2s ease;
     }
-     .sidebar .nav-item .collapse .nav-link:hover, .sidebar .nav-item .collapsing .nav-link:hover {
-        background: rgba(0,0,0,0.2);
+    body.sidebar-visible .app-header {
+        margin-left: var(--sidebar-width);
     }
-
-    /* Content */
-    .content{margin-left:var(--sidebar-width);height:100vh;overflow:auto;padding:1rem 1.25rem;transition:margin-left .2s ease, margin-right .2s ease}
-    .main-area{margin-right:var(--rightpanel-width)}
+    #notificationBell .badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+    #notificationDropdown .dropdown-item {
+        white-space: normal;
+    }
+    #notificationList {
+        max-height: 350px;
+        overflow-y: auto;
+    }
 
     /* Right panel */
     .right-panel{
       position:fixed;right:0;top:0;
       width:var(--rightpanel-width);
       height:100vh;overflow:auto;
-      background:#ffffff;border-left:1px solid #e9ecef;
+      background:var(--card-bg); border-left:1px solid var(--bs-border-color);
       padding:1rem;
       transition:transform .2s ease;
-      z-index:1029;
+      transform: translateX(100%);
+      z-index:1031;
       box-shadow:0 0 12px rgba(0,0,0,.06);
     }
-
-    .small-muted{font-size:.88rem;color:#6c757d}
-    .report-grid{overflow-y:auto;max-height:65vh}
-
-    /* Collapsed states */
-    body.collapsed-left .sidebar{width:var(--sidebar-collapsed)}
-    body.collapsed-left .content{margin-left:var(--sidebar-collapsed)}
-    body.collapsed-left .sidebar .hide-when-collapsed{opacity:0;pointer-events:none}
-
-    body.collapsed-right .main-area{margin-right:0}
-    body.collapsed-right .right-panel{transform:translateX(100%)}
-
-    /* Gray icon buttons inside bars */
-    .btn-gray{
-      background:#e9ecef;border:1px solid #ced4da;color:#495057;
+    body.right-panel-visible .right-panel {
+        transform: translateX(0);
     }
-    .btn-gray:hover{background:#dee2e6;color:#212529}
-
-    /* Tables responsiveness */
-    .table-responsive{overflow-x:auto}
-    table th, table td{vertical-align:middle}
-    #tRelFull tfoot th, #tRelFullSintetico tfoot th, #tRelSaidas tfoot th, #tRelEstoque tfoot th, #tRelEntradas tfoot th, #tRelSaidaIndividual tfoot th {
-        font-weight: 600;
-        background-color: #f8f9fa;
+    
+    /* Triggers for sidebars */
+    #left-sidebar-trigger, #right-panel-trigger {
+        position: fixed;
+        top: 0;
+        width: 15px;
+        height: 100%;
+        z-index: 1020;
     }
-    #tabelaContagem .diff-pos { color: #198754; font-weight: bold; }
-    #tabelaContagem .diff-neg { color: #dc3545; font-weight: bold; }
+    #left-sidebar-trigger { left: 0; }
+    #right-panel-trigger { right: 0; }
 
-    /* Toast Notification Area */
-    .toast-container { z-index: 1090; }
-
+    
     /* Dashboard Cards */
     .dashboard-card .card-body {
         display: flex;
@@ -114,106 +187,104 @@
         font-weight: 500;
         color: #6c757d;
     }
+    body.dark-mode .dashboard-card .card-title { color: #aaa; }
     .dashboard-card .card-text {
         font-size: 1.75rem;
         font-weight: 600;
         color: #0d6efd;
     }
-    .dashboard-card .card-text.text-danger {
-        color: #dc3545;
-    }
-     .dashboard-card .card-text.text-success {
-        color: #198754;
-    }
-    .dashboard-card .card-text.text-warning {
-        color: #ffc107;
-    }
-    .dashboard-card .card-text.text-info {
-        color: #0dcaf0;
-    }
+    .dashboard-card .card-text.text-danger { color: #dc3545; }
+    .dashboard-card .card-text.text-success { color: #198754; }
+    .dashboard-card .card-text.text-warning { color: #ffc107; }
+    .dashboard-card .card-text.text-info { color: #0dcaf0; }
     
-    /* Right Panel Hover Trigger */
-    #right-panel-trigger {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 10px;
-        height: 100%;
-        z-index: 1031; /* Above other content but below an open panel */
-        cursor: pointer;
-    }
-
-    /* Smaller screens */
     @media (max-width: 992px){
-      .main-area{margin-right:0}
-      body:not(.force-right) .right-panel{transform:translateX(100%)}
-    }
-    @media (max-width: 768px){
-      body {
-        --sidebar-width: var(--sidebar-collapsed);
-      }
-      body.sidebar-hover {
-        --sidebar-width: 280px;
+      body.sidebar-visible .content, body.sidebar-visible .app-header {
+        margin-left: 0;
       }
     }
     @media (max-width: 576px){
       :root{ --sidebar-width:240px; --rightpanel-width:320px; }
-      .report-grid{max-height:60vh}
-      .content{padding:.75rem}
+      .content{padding-left: .75rem; padding-right: .75rem;}
       .sidebar{padding:.75rem}
-      body.sidebar-hover {
-        --sidebar-width: 240px;
-      }
     }
   </style>
 </head>
-<body>
+<body class="collapsed-right">
+  
+  <div id="left-sidebar-trigger"></div>
+  <div id="right-panel-trigger"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+      <h4 id="pageTitle" class="mb-0">Dashboard</h4>
+      <div class="ms-auto">
+          <div class="dropdown">
+              <button id="notificationBell" class="btn btn-outline-secondary position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="bi bi-bell-fill"></i>
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notificationBadge"></span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdown" style="width: 300px;">
+                  <li><h6 class="dropdown-header">Central de Notificações</h6></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <div id="notificationList">
+                      <li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>
+                  </div>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item text-center small text-muted" href="#" id="clearNotificationsBtn">Limpar Notificações</a></li>
+              </ul>
+          </div>
+      </div>
+  </header>
 
   <!-- Sidebar -->
   <aside class="sidebar d-flex flex-column">
+    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" id="sidebarCloseBtn" aria-label="Close"></button>
     <div class="brand d-flex justify-content-between align-items-center">
       <div class="toggle-inline">
         <i class="bi bi-boxes"></i>
-        <h4 class="mb-0 hide-when-collapsed">E-COMPRE</h4>
+        <h4 class="mb-0">E-COMPRE</h4>
       </div>
     </div>
-    <div class="mb-2 small-muted hide-when-collapsed">Navegação</div>
+    <div class="mb-2 small-muted">Navegação</div>
     <nav class="nav flex-column mb-3" id="menu">
-      <a class="nav-link active" data-tab="dashboard"><i class="bi bi-speedometer2"></i> <span class="hide-when-collapsed">Dashboard</span></a>
-      <a class="nav-link" data-tab="produtos"><i class="bi bi-box-seam"></i> <span class="hide-when-collapsed">Produtos</span></a>
-      <a class="nav-link" data-tab="entrada"><i class="bi bi-box-arrow-in-down"></i> <span class="hide-when-collapsed">Entradas</span></a>
-      <a class="nav-link" data-tab="saida"><i class="bi bi-box-arrow-up"></i> <span class="hide-when-collapsed">Saídas</span></a>
-      <a class="nav-link" data-tab="lojas"><i class="bi bi-shop"></i> <span class="hide-when-collapsed">Lojas</span></a>
-      <a class="nav-link" data-tab="tabelas-preco"><i class="bi bi-tags"></i> <span class="hide-when-collapsed">Tabelas de Preço</span></a>
-      <a class="nav-link" data-tab="contagem-estoque"><i class="bi bi-clipboard-check"></i> <span class="hide-when-collapsed">Contagem de Estoque</span></a>
+      <a class="nav-link active" data-tab="dashboard"><i class="bi bi-speedometer2"></i> <span>Dashboard</span></a>
+      <a class="nav-link" data-tab="produtos"><i class="bi bi-box-seam"></i> <span>Produtos</span></a>
+      <a class="nav-link" data-tab="entrada"><i class="bi bi-box-arrow-in-down"></i> <span>Entradas</span></a>
+      <a class="nav-link" data-tab="saida"><i class="bi bi-box-arrow-up"></i> <span>Saídas</span></a>
+      <a class="nav-link" data-tab="lojas"><i class="bi bi-shop"></i> <span>Lojas</span></a>
+      <a class="nav-link" data-tab="tabelas-preco"><i class="bi bi-tags"></i> <span>Tabelas de Preço</span></a>
+      <a class="nav-link" data-tab="contagem-estoque"><i class="bi bi-clipboard-check"></i> <span>Contagem de Estoque</span></a>
       
       <!-- Menu de Relatórios Sanfonado -->
       <li class="nav-item">
         <a class="nav-link" data-bs-toggle="collapse" href="#relatorios-submenu" role="button" aria-expanded="false" aria-controls="relatorios-submenu">
-          <i class="bi bi-journal-text"></i> <span class="hide-when-collapsed">Relatórios <i class="bi bi-chevron-down float-end"></i></span>
+          <i class="bi bi-journal-text"></i> <span>Relatórios <i class="bi bi-chevron-down float-end"></i></span>
         </a>
         <div class="collapse" id="relatorios-submenu">
           <ul class="nav flex-column">
-            <a class="nav-link" data-tab="relatorio-entradas"><i class="bi bi-arrow-down-circle"></i> <span class="hide-when-collapsed">Rel. Entradas</span></a>
-            <a class="nav-link" data-tab="relatorio-saidas"><i class="bi bi-arrow-up-circle"></i> <span class="hide-when-collapsed">Rel. Saídas</span></a>
-            <a class="nav-link" data-tab="relatorio-saida-individual"><i class="bi bi-person-bounding-box"></i> <span class="hide-when-collapsed">Rel. Saída Individual</span></a>
-            <a class="nav-link" data-tab="relatorio-estoque"><i class="bi bi-clipboard-data"></i> <span class="hide-when-collapsed">Rel. Estoque</span></a>
-            <a class="nav-link" data-tab="relatorio-full"><i class="bi bi-table"></i> <span class="hide-when-collapsed">Rel. FULL</span></a>
+            <a class="nav-link" data-tab="relatorio-entradas"><i class="bi bi-arrow-down-circle"></i> <span>Rel. Entradas</span></a>
+            <a class="nav-link" data-tab="relatorio-saidas"><i class="bi bi-arrow-up-circle"></i> <span>Rel. Saídas</span></a>
+            <a class="nav-link" data-tab="relatorio-saida-individual"><i class="bi bi-person-bounding-box"></i> <span>Rel. Saída Individual</span></a>
+            <a class="nav-link" data-tab="relatorio-estoque"><i class="bi bi-clipboard-data"></i> <span>Rel. Estoque</span></a>
+            <a class="nav-link" data-tab="relatorio-full"><i class="bi bi-table"></i> <span>Rel. FULL</span></a>
           </ul>
         </div>
       </li>
       
-      <a class="nav-link" data-tab="importexport"><i class="bi bi-arrow-left-right"></i> <span class="hide-when-collapsed">Import / Export</span></a>
+      <a class="nav-link" data-tab="importexport"><i class="bi bi-arrow-left-right"></i> <span>Import / Export</span></a>
     </nav>
-    <div class="mt-auto small-muted hide-when-collapsed">AutoBackup no navegador</div>
+    <div class="mt-auto">
+        <div class="small-muted">AutoBackup no navegador</div>
+        <a class="nav-link" href="#" id="darkModeToggle"><i class="bi bi-moon-stars-fill"></i> <span>Modo Escuro</span></a>
+    </div>
   </aside>
 
   <!-- Main content -->
-  <main class="content main-area">
+  <main class="content">
     <!-- Dashboard -->
     <section id="dashboard" class="tab-page">
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
-            <h3 class="mb-0">Dashboard</h3>
             <div class="d-flex gap-2 align-items-center">
                 <label class="form-label mb-0 small">Período:</label>
                 <input type="date" id="dashInicio" class="form-control form-control-sm" style="width: auto;">
@@ -222,7 +293,7 @@
         </div>
         
         <!-- Row 1: Cards -->
-        <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-8 g-4 mb-4">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 mb-4">
             <div class="col">
                 <div class="card dashboard-card h-100">
                     <div class="card-body">
@@ -236,6 +307,30 @@
                     <div class="card-body">
                         <h5 class="card-title">Valor Estoque (Distrib.)</h5>
                         <p class="card-text" id="valorEstoqueDistCard">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+             <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Valor Total (Rel. FULL)</h5>
+                        <p class="card-text text-success" id="valorTotalFullCard">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Unidades em Estoque</h5>
+                        <p class="card-text text-info" id="totalUnidadesEstoqueCard">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Unidades (Rel. FULL)</h5>
+                        <p class="card-text" id="totalUnidadesFullCard">0</p>
                     </div>
                 </div>
             </div>
@@ -402,7 +497,7 @@
     <!-- Produtos -->
     <section id="produtos" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Produtos</h3>
+        <h3>Produtos</h3>
         <div class="small-muted">Custo e valor de distribuição por unidade</div>
       </div>
       <div class="card mb-3">
@@ -437,7 +532,7 @@
     <!-- Entrada -->
     <section id="entrada" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Registrar Entrada</h3>
+        <h3>Registrar Entrada</h3>
         <div class="small-muted">Não exige loja</div>
       </div>
       <div class="card mb-3"><div class="card-body">
@@ -468,7 +563,7 @@
     <!-- Saída -->
     <section id="saida" class="tab-page d-none">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h3 class="mb-0">Registrar Saída</h3>
+            <h3>Registrar Saída</h3>
             <div class="small-muted">Selecione a loja e a tabela de preço</div>
         </div>
         <div class="card mb-3">
@@ -504,7 +599,7 @@
     <!-- Lojas -->
     <section id="lojas" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Cadastro de Lojas</h3>
+        <h3>Cadastro de Lojas</h3>
       </div>
       <div class="card mb-3"><div class="card-body">
         <form id="formLoja" class="row g-2 align-items-end">
@@ -533,7 +628,7 @@
     <!-- Tabelas de Preço -->
     <section id="tabelas-preco" class="tab-page d-none">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h3 class="mb-0">Tabelas de Preço</h3>
+            <h3>Tabelas de Preço</h3>
         </div>
         <div class="row g-4">
             <div class="col-lg-8">
@@ -592,7 +687,7 @@
     <!-- Contagem de Estoque -->
     <section id="contagem-estoque" class="tab-page d-none">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h3 class="mb-0">Contagem e Ajuste de Estoque</h3>
+            <h3>Contagem e Ajuste de Estoque</h3>
         </div>
         <div class="alert alert-warning">
             <i class="bi bi-info-circle-fill"></i>
@@ -626,7 +721,7 @@
     <!-- Relatório Estoque -->
     <section id="relatorio-estoque" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Relatório de Estoque Geral</h3>
+        <h3>Relatório de Estoque Geral</h3>
         <div class="small-muted">Quantidade por produto / custo / distribuição</div>
       </div>
       <div class="card"><div class="card-body report-grid">
@@ -640,7 +735,7 @@
     <!-- Relatório Saídas -->
     <section id="relatorio-saidas" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Relatório de Saídas (Lojas x Datas)</h3>
+        <h3>Relatório de Saídas (Lojas x Datas)</h3>
         <div class="d-flex flex-wrap gap-2">
           <input id="rInicio" type="date" class="form-control">
           <input id="rFim" type="date" class="form-control">
@@ -657,7 +752,7 @@
     <!-- Relatório Entradas -->
     <section id="relatorio-entradas" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Relatório de Entradas</h3>
+        <h3>Relatório de Entradas</h3>
         <div class="d-flex flex-wrap gap-2">
           <input id="reInicio" type="date" class="form-control">
           <input id="reFim" type="date" class="form-control">
@@ -673,7 +768,7 @@
     <!-- Relatório Saída Individual -->
     <section id="relatorio-saida-individual" class="tab-page d-none">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h3 class="mb-0">Relatório de Saída Individual (Resumido)</h3>
+        <h3>Relatório de Saída Individual (Resumido)</h3>
       </div>
       <div class="d-flex flex-wrap gap-2 align-items-start p-3 bg-light border rounded mb-3">
           <div class="flex-grow-1" style="min-width: 200px;">
@@ -702,7 +797,7 @@
     <!-- Relatório FULL -->
     <section id="relatorio-full" class="tab-page d-none">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h3 class="mb-0">Relatório FULL (Estoque por Loja)</h3>
+            <h3>Relatório FULL (Estoque por Loja)</h3>
             <div id="fullReportControls" class="d-flex flex-wrap gap-3 align-items-center">
                 <!-- Tipo de Relatório -->
                 <div class="form-check form-check-inline">
@@ -715,6 +810,7 @@
                 </div>
                 <!-- Botões de Ação -->
                 <button id="btnSalvarAlloc" class="btn btn-success btn-sm">Salvar Alocações</button>
+                <button id="btnLimparAlloc" class="btn btn-danger btn-sm">Limpar Alocações</button>
                 <button id="btnExportPdfFull" class="btn btn-outline-primary btn-sm">Exportar PDF</button>
             </div>
         </div>
@@ -730,7 +826,7 @@
 
     <!-- Import/Export -->
     <section id="importexport" class="tab-page d-none">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3 class="mb-0">Import / Export / Manutenção</h3></div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><h3>Import / Export / Manutenção</h3></div>
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-column gap-2">
@@ -768,30 +864,62 @@
     </section>
   </main>
   
-  <div id="right-panel-trigger"></div>
-
-  <!-- Right panel -->
   <aside class="right-panel">
-    <div class="d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Editor Rápido</h5>
-    </div>
-    <hr>
-    <div id="editorArea">
-      <h6>Editar Movimento</h6>
-      <form id="formEdit">
-        <input type="hidden" id="editIndex">
-        <div class="mb-2"><label>Tipo</label><select id="editTipo" class="form-select" disabled><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
-        <div class="mb-2"><label>Produto</label><select id="editProduto" class="form-select"></select></div>
-        <div class="mb-2" id="editLojaWrap"><label>Loja (apenas para saída)</label><select id="editLoja" class="form-select"></select></div>
-        <div class="mb-2"><label>Quantidade</label><input id="editQuantidade" type="number" class="form-control" min="1"></div>
-        <div class="mb-2"><label>Data</label><input id="editData" type="date" class="form-control"></div>
-        <div class="mb-2"><label>Observação</label><input id="editObs" class="form-control"></div>
-        <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-primary">Salvar Alterações</button>
-          <button id="btnCancelEdit" type="button" class="btn btn-outline-secondary">Cancelar</button>
-        </div>
-      </form>
-    </div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Ações Rápidas</h5>
+          <button type="button" class="btn-close" id="rightPanelCloseBtn" aria-label="Close"></button>
+      </div>
+      
+      <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-3">
+          <button class="btn btn-success btn-sm" type="button" id="btnShowNovaEntrada"><i class="bi bi-plus-circle"></i> Nova Entrada</button>
+          <button class="btn btn-danger btn-sm" type="button" id="btnShowNovaSaida"><i class="bi bi-dash-circle"></i> Nova Saída</button>
+      </div>
+      <hr>
+
+      <!-- Formulário de Nova Entrada -->
+      <div id="novaEntradaArea" class="d-none">
+          <h6>Nova Entrada Rápida</h6>
+          <form id="formNovaEntrada" class="d-flex flex-column gap-2">
+              <div class="input-group"><select id="qrProdutoEntrada" class="form-select" required><option value="">-- Produto --</option></select><button class="btn btn-outline-secondary" type="button" id="btnScanQrEntrada"><i class="bi bi-qr-code-scan"></i></button></div>
+              <div><label class="form-label small">Quantidade</label><input id="qrQuantidadeEntrada" type="number" min="1" class="form-control" value="1" required></div>
+              <div><label class="form-label small">Data</label><input id="qrDataEntrada" type="date" class="form-control" required></div>
+              <div><label class="form-label small">Observação</label><input id="qrObsEntrada" class="form-control"></div>
+              <button class="btn btn-success mt-2">Registrar Entrada</button>
+          </form>
+      </div>
+
+      <!-- Formulário de Nova Saída -->
+      <div id="novaSaidaArea" class="d-none">
+          <h6>Nova Saída Rápida</h6>
+          <form id="formNovaSaida" class="d-flex flex-column gap-2">
+              <div class="input-group"><select id="qrProdutoSaida" class="form-select" required><option value="">-- Produto --</option></select><button class="btn btn-outline-secondary" type="button" id="btnScanQrSaida"><i class="bi bi-qr-code-scan"></i></button></div>
+              <div><label class="form-label small">Loja</label><select id="qrLojaSaida" class="form-select" required></select></div>
+              <div><label class="form-label small">Tabela de Preço</label><select id="qrTabelaPrecoSaida" class="form-select" required></select></div>
+              <div><label class="form-label small">Quantidade</label><input id="qrQuantidadeSaida" type="number" min="1" class="form-control" value="1" required></div>
+              <div><label class="form-label small">Data</label><input id="qrDataSaida" type="date" class="form-control" required></div>
+              <div><label class="form-label small">Observação</label><input id="qrObsSaida" class="form-control"></div>
+              <button class="btn btn-danger mt-2">Registrar Saída</button>
+          </form>
+      </div>
+
+      <!-- Formulário de Edição -->
+      <div id="editorArea" class="d-none">
+          <h6>Editar Movimento</h6>
+          <form id="formEdit" class="d-flex flex-column gap-2">
+              <input type="hidden" id="editIndex">
+              <div><label class="form-label small">Tipo</label><select id="editTipo" class="form-select" disabled><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+              <div><label class="form-label small">Produto</label><select id="editProduto" class="form-select"></select></div>
+              <div id="editLojaWrap"><label class="form-label small">Loja</label><select id="editLoja" class="form-select"></select></div>
+              <div id="editTabelaWrap"><label class="form-label small">Tabela de Preço</label><select id="editTabelaPreco" class="form-select"></select></div>
+              <div><label class="form-label small">Quantidade</label><input id="editQuantidade" type="number" class="form-control" min="1"></div>
+              <div><label class="form-label small">Data</label><input id="editData" type="date" class="form-control"></div>
+              <div><label class="form-label small">Observação</label><input id="editObs" class="form-control"></div>
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                  <button class="btn btn-primary">Salvar Alterações</button>
+                  <button id="btnCancelEdit" type="button" class="btn btn-outline-secondary">Cancelar</button>
+              </div>
+          </form>
+      </div>
   </aside>
 
   <!-- Toast Container (para notificações) -->
@@ -816,6 +944,21 @@
     </div>
   </div>
 
+  <!-- Modal do Leitor de QR Code -->
+  <div class="modal fade" id="qrScannerModal" tabindex="-1" aria-labelledby="qrScannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="qrScannerModalLabel">Escanear Código do Produto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="qr-reader" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Libraries -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -826,6 +969,9 @@
   <!-- jsPDF and AutoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  
+  <!-- QR Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
   <script>
     const { jsPDF } = window.jspdf;
@@ -837,6 +983,7 @@
     const KEY_ALLOC = 'estoque_alocacoes_v13';
     const KEY_AUTOBACK = 'estoque_autobackup_v13';
     const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
+    const KEY_THEME = 'estoque_theme_v18';
     const LOW_STOCK_THRESHOLD = 10;
     const STAGNANT_STOCK_DAYS = 90;
 
@@ -846,15 +993,18 @@
     let movimentos = load(KEY_MOVES);
     let alocacoes = load(KEY_ALLOC); if(!alocacoes || typeof alocacoes!=='object' || Array.isArray(alocacoes)) alocacoes = {};
     let priceTables = load(KEY_PRICETABLES); if(!priceTables || typeof priceTables!=='object' || Array.isArray(priceTables)) priceTables = {};
+    let tempAlocacoes = {}; // Para o cálculo do relatório FULL
 
 
     // ===== Elementos da UI e Instâncias =====
     const menu = document.getElementById('menu');
     const tabs = document.querySelectorAll('.tab-page');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
     const dtInstances = {}; // Armazena instâncias do DataTables
-    let saidasPorLojaChart; // Armazena instância do Chart.js
-    let vendasDiariasChartInstance; // Armazena instância do Chart.js
+    let saidasPorLojaChart, vendasDiariasChartInstance;
+    let html5QrCode;
+
 
     // Objeto de tradução para a biblioteca DataTables.
     const dtLang = {
@@ -873,16 +1023,19 @@
 
     // ===== Função de Inicialização =====
     document.addEventListener('DOMContentLoaded', function() {
+      loadTheme();
       bindMenu();
       bindForms();
       bindTogglesAndHover();
       bindTableActions();
       bindDashboardFilters();
       bindFullReportControls();
+      bindQuickEditor();
+      bindHeaderActions();
 
       // Define datas padrão para os filtros
       const today = new Date().toISOString().slice(0,10);
-      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim', 'archiveDate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
+      ['eData','sData','rFim', 'dashFim', 'reFim', 'rsiFim', 'archiveDate', 'qrDataEntrada', 'qrDataSaida'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
       const past = new Date(); past.setDate(past.getDate()-30); // Padrão de 30 dias
       ['rInicio', 'dashInicio', 'reInicio', 'rsiInicio'].forEach(id => {
           const el = document.getElementById(id); if(el) el.value = past.toISOString().slice(0,10);
@@ -921,6 +1074,12 @@
       if (!id) return; // Se clicou no toggle do menu, não faz nada
       tabs.forEach(t=> t.id===id ? t.classList.remove('d-none') : t.classList.add('d-none'));
       
+      const titleEl = document.getElementById('pageTitle');
+      const activeLink = menu.querySelector(`.nav-link[data-tab="${id}"]`);
+      if (titleEl && activeLink) {
+        titleEl.textContent = activeLink.querySelector('span').textContent;
+      }
+      
       // Renderiza conteúdo específico da aba quando ela é aberta
       switch(id) {
         case 'dashboard': renderDashboard(); break;
@@ -951,39 +1110,78 @@
 
     // ===== Controles de UI (Toggles, Hover, Responsividade) =====
     function bindTogglesAndHover(){
-      // Hover para o menu esquerdo
+      const body = document.body;
       const leftSidebar = document.querySelector('.sidebar');
-      leftSidebar.addEventListener('mouseenter', () => {
-          document.body.classList.add('sidebar-hover');
-          document.body.classList.remove('collapsed-left');
-      });
-      leftSidebar.addEventListener('mouseleave', () => {
-          document.body.classList.remove('sidebar-hover');
-          handleInitialSidebarState();
-      });
-      
-      // Hover para o painel direito
       const rightPanel = document.querySelector('.right-panel');
+      
+      const leftTrigger = document.getElementById('left-sidebar-trigger');
+      const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+      const rightPanelCloseBtn = document.getElementById('rightPanelCloseBtn');
       const rightPanelTrigger = document.getElementById('right-panel-trigger');
 
-      rightPanelTrigger.addEventListener('mouseenter', () => {
-          document.body.classList.remove('collapsed-right');
+      // Left Sidebar Logic
+      leftTrigger.addEventListener('mouseenter', () => {
+          body.classList.add('sidebar-visible');
       });
-      rightPanel.addEventListener('mouseleave', () => {
-          document.body.classList.add('collapsed-right');
+      leftSidebar.addEventListener('mouseleave', () => {
+          body.classList.remove('sidebar-visible');
+      });
+      sidebarCloseBtn.addEventListener('click', () => {
+          body.classList.remove('sidebar-visible');
       });
       
-      // Observador para responsividade
-      new ResizeObserver(handleInitialSidebarState).observe(document.body);
+      // Right Panel Logic
+      rightPanelTrigger.addEventListener('mouseenter', () => {
+          body.classList.remove('collapsed-right');
+          body.classList.add('right-panel-visible');
+      });
+      rightPanel.addEventListener('mouseleave', () => {
+          body.classList.add('collapsed-right');
+          body.classList.remove('right-panel-visible');
+      });
+      rightPanelCloseBtn.addEventListener('click', () => {
+         body.classList.add('collapsed-right');
+         body.classList.remove('right-panel-visible');
+      });
+      
+      // Dark Mode Toggle
+      document.getElementById('darkModeToggle').addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleTheme();
+      });
     }
 
     function handleInitialSidebarState() {
-        if (document.body.classList.contains('sidebar-hover')) return;
-        if (window.innerWidth <= 768) {
-            document.body.classList.add('collapsed-left');
+      // Esta função não é mais necessária para o menu esquerdo com a nova lógica
+    }
+
+    function loadTheme() {
+        const theme = localStorage.getItem(KEY_THEME);
+        if(theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            updateChartTheme('dark');
         } else {
-            document.body.classList.remove('collapsed-left');
+            updateChartTheme('light');
         }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        if(document.body.classList.contains('dark-mode')) {
+            localStorage.setItem(KEY_THEME, 'dark');
+            updateChartTheme('dark');
+        } else {
+            localStorage.setItem(KEY_THEME, 'light');
+            updateChartTheme('light');
+        }
+        renderDashboard(); // Re-renderiza o dashboard para aplicar as cores do gráfico
+    }
+    
+    function updateChartTheme(theme) {
+        const color = theme === 'dark' ? '#f0f0f0' : '#666';
+        const borderColor = theme === 'dark' ? '#3a3a3c' : '#dee2e6';
+        Chart.defaults.color = color;
+        Chart.defaults.borderColor = borderColor;
     }
 
 
@@ -1044,6 +1242,7 @@
       document.getElementById('btnExportPdfRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); exportarPDFSaidaIndividual(); });
 
       document.getElementById('btnSalvarAlloc').addEventListener('click', e=>{ e.preventDefault(); salvarAlocacoesFromGrid(); });
+      document.getElementById('btnLimparAlloc').addEventListener('click', e => { e.preventDefault(); limparAlocacoes(); });
       document.getElementById('btnExportPdfFull').addEventListener('click', e=>{ e.preventDefault(); exportarPDFFull(); });
 
       document.getElementById('exportJson').addEventListener('click', exportJson);
@@ -1100,6 +1299,18 @@
         });
     }
 
+    function bindHeaderActions() {
+        document.getElementById('clearNotificationsBtn').addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const notificationList = document.getElementById('notificationList');
+            const badge = document.getElementById('notificationBadge');
+            notificationList.innerHTML = '<li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>';
+            badge.classList.add('d-none');
+            badge.textContent = '';
+        });
+    }
+
     // ===== Funções Auxiliares de Dados (Storage, Download, Notificações) =====
     const truncateText = (text, length) => (text && text.length > length) ? text.substring(0, length) + '...' : text;
 
@@ -1140,7 +1351,7 @@
     }
 
     function showConfirmationModal(message, callback) {
-        document.getElementById('confirmationModalBody').textContent = message;
+        document.getElementById('confirmationModalBody').innerHTML = message;
         const confirmBtn = document.getElementById('confirmActionBtn');
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -1189,19 +1400,19 @@
             return;
         }
 
-        showConfirmationModal(`Você está prestes a arquivar ${toArchive.length} movimentos anteriores a ${new Date(cutoffDate + 'T12:00:00').toLocaleDateString()}. O estoque inicial dos produtos será ajustado permanentemente. Esta ação não pode ser desfeita. Deseja continuar?`, () => {
+        const netImpact = {};
+        toArchive.forEach(m => {
+            netImpact[m.produto] = netImpact[m.produto] || 0;
+            if (m.tipo === 'entrada') netImpact[m.produto] += m.quantidade;
+            else if (m.tipo === 'saida') netImpact[m.produto] -= m.quantidade;
+        });
+        const impactedProductsCount = Object.keys(netImpact).length;
+
+        const confirmationMessage = `Você está prestes a arquivar ${toArchive.length} movimentos anteriores a ${new Date(cutoffDate + 'T12:00:00').toLocaleDateString()}. O estoque inicial de ${impactedProductsCount} produto(s) será ajustado permanentemente. Esta ação não pode ser desfeita. Deseja continuar?`;
+
+        showConfirmationModal(confirmationMessage, () => {
             const toKeep = movimentos.filter(m => m.data >= cutoffDate);
-            const netImpact = {};
-
-            toArchive.forEach(m => {
-                netImpact[m.produto] = netImpact[m.produto] || 0;
-                if (m.tipo === 'entrada') {
-                    netImpact[m.produto] += m.quantidade;
-                } else if (m.tipo === 'saida') {
-                    netImpact[m.produto] -= m.quantidade;
-                }
-            });
-
+            
             produtos.forEach(p => {
                 if (netImpact[p.codigo]) {
                     p.estoque_inicial = (p.estoque_inicial || 0) + netImpact[p.codigo];
@@ -1391,33 +1602,49 @@
     // Edição Rápida
     function abrirEditor(idx){
       const m=movimentos[idx]; if(!m) { showToast('Movimento não encontrado', 'danger'); return; }
+      setRightPanelState('edit');
       document.getElementById('editIndex').value=idx; document.getElementById('editTipo').value=m.tipo;
-      preencherSelectsProdutos(); document.getElementById('editProduto').value=m.produto;
-      preencherSelectsLojas();
-      if(m.tipo==='saida'){ document.getElementById('editLojaWrap').style.display='block'; document.getElementById('editLoja').value=m.loja||''; }
-      else { document.getElementById('editLojaWrap').style.display='none'; document.getElementById('editLoja').value=''; }
+      preencherSelectsProdutos(['editProduto']); document.getElementById('editProduto').value=m.produto;
+      preencherSelectsLojas(['editLoja']);
+      preencherSelectsTabelaPreco(['editTabelaPreco']);
+      if(m.tipo==='saida'){ 
+          document.getElementById('editLojaWrap').style.display='block'; document.getElementById('editLoja').value=m.loja||''; 
+          document.getElementById('editTabelaWrap').style.display='block'; document.getElementById('editTabelaPreco').value=m.tabelaPreco||'empresa'; 
+      }
+      else { 
+          document.getElementById('editLojaWrap').style.display='none'; document.getElementById('editLoja').value='';
+          document.getElementById('editTabelaWrap').style.display='none'; document.getElementById('editTabelaPreco').value='';
+      }
       document.getElementById('editQuantidade').value=m.quantidade; document.getElementById('editData').value=m.data; document.getElementById('editObs').value=m.obs||'';
       
       document.body.classList.remove('collapsed-right');
+      document.body.classList.add('right-panel-visible');
     }
-    function clearEdit(){ document.getElementById('formEdit').reset(); document.getElementById('editIndex').value=''; document.getElementById('editData').value=new Date().toISOString().slice(0,10); document.getElementById('editLojaWrap').style.display='block'; }
+    function clearEdit(){ 
+      setRightPanelState('none');
+      document.getElementById('formEdit').reset(); document.getElementById('editIndex').value='';
+    }
     function salvarEdicao(){
       const idx=Number(document.getElementById('editIndex').value); if(isNaN(idx) || idx < 0 || idx >= movimentos.length) { showToast('Nenhum movimento selecionado', 'danger'); return; }
       const tipo=document.getElementById('editTipo').value; const produto=document.getElementById('editProduto').value; const loja=document.getElementById('editLoja').value;
+      const tabelaPreco = document.getElementById('editTabelaPreco').value;
       const quantidade=Number(document.getElementById('editQuantidade').value); const data=document.getElementById('editData').value; const obs=document.getElementById('editObs').value.trim();
       if(!produto||quantidade<=0||!data||(tipo==='saida'&&!loja)){ showToast('Preencha os campos corretamente', 'danger'); return; }
       movimentos[idx].produto = produto;
       movimentos[idx].quantidade = quantidade;
       movimentos[idx].data = data;
       movimentos[idx].obs = obs;
-      if(tipo==='saida') movimentos[idx].loja = loja;
+      if(tipo==='saida') {
+        movimentos[idx].loja = loja;
+        movimentos[idx].tabelaPreco = tabelaPreco;
+      }
       save(KEY_MOVES, movimentos); renderAll(); clearEdit(); showToast('Movimento atualizado', 'success');
     }
 
     // ===== Renderização e Relatórios =====
     // Selects
-    function preencherSelectsLojas(){
-      ['sLoja','editLoja', 'rsiLoja'].forEach(id=>{ 
+    function preencherSelectsLojas(ids = ['sLoja','editLoja', 'rsiLoja', 'qrLojaSaida']){
+      ids.forEach(id=>{ 
           const sel=document.getElementById(id); 
           if(!sel) return; 
           
@@ -1450,13 +1677,12 @@
           }
       });
     }
-    function preencherSelectsProdutos(){
-      ['eProduto','sProduto','editProduto'].forEach(id=>{ const sel=document.getElementById(id); if(!sel) return; const old=sel.value; sel.innerHTML='<option value="">-- Selecione --</option>'; produtos.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.codigo; opt.textContent=`${p.codigo} - ${p.nome}`; sel.appendChild(opt); }); if(old) sel.value=old; });
+    function preencherSelectsProdutos(ids = ['eProduto','sProduto','editProduto', 'qrProdutoEntrada', 'qrProdutoSaida']){
+      ids.forEach(id=>{ const sel=document.getElementById(id); if(!sel) return; const old=sel.value; sel.innerHTML='<option value="">-- Selecione --</option>'; produtos.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.codigo; opt.textContent=`${p.codigo} - ${p.nome}`; sel.appendChild(opt); }); if(old) sel.value=old; });
     }
-    function preencherSelectsTabelaPreco() {
-        const selects = ['sTabelaPreco', 'selectTabelaPreco', 'importSelectTabela'];
+    function preencherSelectsTabelaPreco(ids = ['sTabelaPreco', 'selectTabelaPreco', 'importSelectTabela', 'qrTabelaPrecoSaida', 'editTabelaPreco']) {
         const tabelas = ['empresa', 'drop']; // Adicione mais tabelas customizadas aqui
-        selects.forEach(id => {
+        ids.forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
             const oldValue = select.value;
@@ -1477,14 +1703,13 @@
         const instanceName = type === 'entrada' ? 'entradas' : 'saidas';
 
         const movimentosFiltrados = movimentos.map((m, index) => ({...m, originalIndex: index}))
-                                             .filter(m => m.tipo === type)
-                                             .sort((a, b) => new Date(b.data) - new Date(a.data));
+                                             .filter(m => m.tipo === type);
 
         const data = movimentosFiltrados.map(m => {
             const prod = produtos.find(p => p.codigo === m.produto);
             const loja = lojas.find(l => l.codigo === m.loja);
             const baseData = {
-                data: new Date(m.data + 'T12:00:00').toLocaleDateString(),
+                data: m.data,
                 codigo: prod ? prod.codigo : '-',
                 produto: prod ? prod.nome : `[${m.produto}]`,
                 quantidade: m.quantidade,
@@ -1506,6 +1731,7 @@
 
     // Dashboard
     function renderDashboard() {
+        renderNotifications();
         const inicio = document.getElementById('dashInicio').value;
         const fim = document.getElementById('dashFim').value;
         if (!inicio || !fim || inicio > fim) return;
@@ -1517,13 +1743,33 @@
 
         let totalValorCusto = 0;
         let totalValorDist = 0;
+        let totalUnidadesEstoque = 0;
         produtos.forEach(p => {
             const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            totalUnidadesEstoque += estoqueAtual;
             totalValorCusto += estoqueAtual * (p.custo || 0);
             totalValorDist += estoqueAtual * (p.dist || 0);
         });
+        document.getElementById('totalUnidadesEstoqueCard').textContent = totalUnidadesEstoque;
         document.getElementById('valorEstoqueCustoCard').textContent = totalValorCusto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         document.getElementById('valorEstoqueDistCard').textContent = totalValorDist.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        let totalUnidadesFull = 0;
+        let valorTotalFull = 0;
+        Object.keys(alocacoes).forEach(lojaCod => {
+            Object.keys(alocacoes[lojaCod]).forEach(prodCod => {
+                const qtd = Number(alocacoes[lojaCod][prodCod] || 0);
+                if(qtd > 0) {
+                    totalUnidadesFull += qtd;
+                    const prod = produtos.find(p => p.codigo === prodCod);
+                    if(prod) {
+                        valorTotalFull += qtd * (prod.dist || 0);
+                    }
+                }
+            });
+        });
+        document.getElementById('totalUnidadesFullCard').textContent = totalUnidadesFull;
+        document.getElementById('valorTotalFullCard').textContent = valorTotalFull.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
         const movimentosFiltrados = movimentos.filter(m => m.data >= inicio && m.data <= fim);
         const saidasFiltradasPeriodo = movimentosFiltrados.filter(m => m.tipo === 'saida');
@@ -2242,6 +2488,7 @@
     function renderRelFull() {
         const type = document.querySelector('input[name="relFullType"]:checked').value;
         document.getElementById('btnSalvarAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
+        document.getElementById('btnLimparAlloc').style.display = (type === 'analitico') ? 'inline-block' : 'none';
 
         if (type === 'analitico') {
             renderRelFullAnalitico_Simple();
@@ -2257,6 +2504,9 @@
             container.innerHTML = '<div class="text-muted">Cadastre produtos e lojas para usar o relatório FULL.</div>';
             return;
         }
+        
+        // Inicializa o objeto temporário para o cálculo dos totais
+        tempAlocacoes = JSON.parse(JSON.stringify(alocacoes));
 
         const tableHTML = `
             <table class="table table-bordered table-striped table-sm w-100" id="tRelFullAnalitico">
@@ -2315,8 +2565,7 @@
                     let totalProdQtde = 0;
                     
                     lojas.forEach((l, index) => {
-                        const input = $(api.row(i).node()).find(`input[data-produto="${productCode}"][data-loja="${l.codigo}"]`);
-                        const qtd = parseInt(input.val(), 10) || 0;
+                        const qtd = (tempAlocacoes[l.codigo] && tempAlocacoes[l.codigo][productCode]) ? Number(tempAlocacoes[l.codigo][productCode]) : 0;
                         columnTotals[index].qtde += qtd;
                         columnTotals[index].valor += qtd * (prod.dist || 0);
                         totalProdQtde += qtd;
@@ -2326,9 +2575,13 @@
                     grandTotalQtde += totalProdQtde;
                     grandTotalValor += totalProdValor;
                     
-                    const node = api.row(i).node();
-                    $(node).find('td').eq(lojas.length + 1).html(totalProdQtde);
-                    $(node).find('td').eq(lojas.length + 2).html(`R$ ${totalProdValor.toFixed(2)}`);
+                    // Atualiza totais de linha apenas para as linhas visíveis
+                    const rowIndex = display.indexOf(i);
+                    if (rowIndex > -1) {
+                      const node = api.row(i).node();
+                      $(node).find('td').eq(lojas.length + 1).html(totalProdQtde);
+                      $(node).find('td').eq(lojas.length + 2).html(`R$ ${totalProdValor.toFixed(2)}`);
+                    }
                 });
 
                 // Update footer
@@ -2344,6 +2597,11 @@
         
         // Trigger calculation on input change
         $('#tRelFullAnalitico tbody').on('change', 'input', function () {
+            const loja = this.dataset.loja;
+            const produto = this.dataset.produto;
+            const qtd = Number(this.value);
+            if(!tempAlocacoes[loja]) tempAlocacoes[loja] = {};
+            tempAlocacoes[loja][produto] = qtd;
             dtInstances.relFullAnalitico.draw(false);
         });
     }
@@ -2406,15 +2664,20 @@
 
 
     function salvarAlocacoesFromGrid(){
-      const allInputs = document.querySelectorAll('#tRelFullAnalitico input[type="number"][data-produto]');
-      if (allInputs.length === 0) {
-          showToast('Mude para o modo Analítico para editar as alocações.', 'info');
-          return;
-      }
-      allInputs.forEach(inp=> setAlloc(inp.dataset.loja, inp.dataset.produto, Number(inp.value||0)));
+      alocacoes = JSON.parse(JSON.stringify(tempAlocacoes));
       save(KEY_ALLOC, alocacoes); 
       dtInstances.relFullAnalitico.draw(false);
       showToast('Alocações salvas.', 'success');
+    }
+
+    function limparAlocacoes() {
+        showConfirmationModal('Tem certeza que deseja limpar TODAS as alocações do relatório FULL?', () => {
+            alocacoes = {};
+            tempAlocacoes = {};
+            save(KEY_ALLOC, alocacoes);
+            renderRelFull();
+            showToast('Alocações limpas com sucesso.', 'success');
+        });
     }
 
     function exportarPDFFull(){
@@ -2686,14 +2949,23 @@
             showToast('Nenhuma diferença de estoque para ajustar.', 'info');
             return;
         }
+        
+        const summary = adjustments.map(adj => {
+            const prod = produtos.find(p => p.codigo === adj.produto);
+            const prodName = prod ? prod.nome : adj.produto;
+            const movementType = adj.diferenca > 0 ? 'Entrada' : 'Saída';
+            return `<li>${prodName}: ${movementType} de ${Math.abs(adj.diferenca)}</li>`;
+        }).join('');
+        
+        const confirmationMessage = `Você está prestes a criar ${adjustments.length} movimento(s) de ajuste: <ul class="text-start">${summary}</ul> Esta ação não pode ser desfeita. Deseja continuar?`;
 
-        showConfirmationModal(`Você está prestes a criar ${adjustments.length} movimento(s) de ajuste de estoque. Esta ação não pode ser desfeita. Deseja continuar?`, () => {
+
+        showConfirmationModal(confirmationMessage, () => {
             adjustments.forEach(adj => {
                 const obs = `Ajuste de contagem. Sistema: ${adj.sistema}, Contado: ${adj.contado}`;
                 if (adj.diferenca > 0) {
                     movimentos.push({ tipo: 'entrada', produto: adj.produto, quantidade: adj.diferenca, data: today, obs });
                 } else {
-                    // Saída de ajuste não tem loja nem tabela de preço
                     movimentos.push({ tipo: 'saida', produto: adj.produto, quantidade: Math.abs(adj.diferenca), data: today, obs, loja: null, tabelaPreco: null });
                 }
             });
@@ -2725,14 +2997,16 @@
         dtInstances.entradas = new DataTable('#tabelaEntradas', {
             responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
             columns: [
-                { data: 'data' }, {data: 'codigo'}, { data: 'produto' }, { data: 'quantidade' },
+                { data: 'data', render: (data) => new Date(data + 'T12:00:00').toLocaleDateString() }, 
+                {data: 'codigo'}, { data: 'produto' }, { data: 'quantidade' },
                 { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
             ]
         });
         dtInstances.saidas = new DataTable('#tabelaSaidas', {
             responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
             columns: [
-                { data: 'data' }, {data: 'codigo'}, { data: 'produto' }, { data: 'loja' }, { data: 'quantidade' },
+                { data: 'data', render: (data) => new Date(data + 'T12:00:00').toLocaleDateString() }, 
+                {data: 'codigo'}, { data: 'produto' }, { data: 'loja' }, { data: 'quantidade' },
                 { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
             ]
         });
@@ -2784,6 +3058,164 @@
       // Renderiza a aba ativa para garantir que os dados estejam atualizados
       showTab(activeTab);
     }
+    
+    // ===== Editor Rápido e QR Code =====
+    function bindQuickEditor() {
+        document.getElementById('btnShowNovaEntrada').addEventListener('click', () => { setRightPanelState('novaEntrada'); document.body.classList.remove('collapsed-right'); document.body.classList.add('right-panel-visible'); });
+        document.getElementById('btnShowNovaSaida').addEventListener('click', () => { setRightPanelState('novaSaida'); document.body.classList.remove('collapsed-right'); document.body.classList.add('right-panel-visible'); });
+
+        document.getElementById('formNovaEntrada').addEventListener('submit', salvarNovaEntrada);
+        document.getElementById('formNovaSaida').addEventListener('submit', salvarNovaSaida);
+
+        document.getElementById('btnScanQrEntrada').addEventListener('click', () => startQrScanner('qrProdutoEntrada'));
+        document.getElementById('btnScanQrSaida').addEventListener('click', () => startQrScanner('qrProdutoSaida'));
+        
+        // Parar a câmera quando o modal for fechado
+        document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', () => {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Falha ao parar o scanner.", err));
+            }
+        });
+    }
+
+    function setRightPanelState(state) {
+        document.getElementById('editorArea').classList.add('d-none');
+        document.getElementById('novaEntradaArea').classList.add('d-none');
+        document.getElementById('novaSaidaArea').classList.add('d-none');
+
+        if (state === 'edit') {
+            document.getElementById('editorArea').classList.remove('d-none');
+        } else if (state === 'novaEntrada') {
+            document.getElementById('novaEntradaArea').classList.remove('d-none');
+        } else if (state === 'novaSaida') {
+            document.getElementById('novaSaidaArea').classList.remove('d-none');
+        }
+    }
+
+    function startQrScanner(targetSelectId) {
+        qrScannerModal.show();
+        html5QrCode = new Html5Qrcode("qr-reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+            if (produtos.some(p => p.codigo === decodedText)) {
+                document.getElementById(targetSelectId).value = decodedText;
+                showToast(`Produto ${decodedText} selecionado!`, 'success');
+            } else {
+                showToast(`Produto com código ${decodedText} não encontrado.`, 'danger');
+            }
+            qrScannerModal.hide();
+        };
+
+        html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+            .catch(err => console.log(`Não foi possível iniciar o scanner: ${err}`));
+    }
+    
+    function salvarNovaEntrada(e) {
+        e.preventDefault();
+        const produto = document.getElementById('qrProdutoEntrada').value;
+        const quantidade = Number(document.getElementById('qrQuantidadeEntrada').value);
+        const data = document.getElementById('qrDataEntrada').value;
+        const obs = document.getElementById('qrObsEntrada').value.trim();
+        if (!produto || quantidade <= 0 || !data) { showToast('Preencha os campos corretamente.', 'danger'); return; }
+        movimentos.push({ tipo: 'entrada', produto, quantidade, data, obs });
+        save(KEY_MOVES, movimentos);
+        renderAll();
+        e.target.reset();
+        document.getElementById('qrDataEntrada').value = new Date().toISOString().slice(0, 10);
+        showToast('Entrada rápida registrada.', 'success');
+    }
+
+    function salvarNovaSaida(e) {
+        e.preventDefault();
+        const produto = document.getElementById('qrProdutoSaida').value;
+        const loja = document.getElementById('qrLojaSaida').value;
+        const tabelaPreco = document.getElementById('qrTabelaPrecoSaida').value;
+        const quantidade = Number(document.getElementById('qrQuantidadeSaida').value);
+        const data = document.getElementById('qrDataSaida').value;
+        const obs = document.getElementById('qrObsSaida').value.trim();
+
+        if (!produto || !loja || quantidade <= 0 || !data || !tabelaPreco) { showToast('Preencha todos os campos corretamente.', 'danger'); return; }
+
+        const estoque = calculaEstoqueProduto(produto);
+        const proceed = () => {
+            movimentos.push({ tipo: 'saida', produto, quantidade, data, loja, obs, tabelaPreco });
+            save(KEY_MOVES, movimentos);
+            renderAll();
+            e.target.reset();
+            document.getElementById('qrDataSaida').value = new Date().toISOString().slice(0, 10);
+            showToast('Saída rápida registrada.', 'success');
+        };
+
+        if (estoque < quantidade) {
+            showConfirmationModal(`Estoque (${estoque}) é menor que a saída (${quantidade}). Deseja confirmar mesmo assim?`, proceed);
+        } else {
+            proceed();
+        }
+    }
+    
+    // ===== Notificações =====
+    function renderNotifications() {
+        const notificationList = document.getElementById('notificationList');
+        const badge = document.getElementById('notificationBadge');
+        notificationList.innerHTML = '';
+        let notifications = [];
+
+        // Estoque Baixo
+        const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
+        if(produtosBaixoEstoque.length > 0) {
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>${produtosBaixoEstoque.length} produto(s)</strong> com estoque baixo.</a>`;
+            notifications.push(item);
+        }
+
+        // Estoque Parado
+        const hoje = new Date();
+        const stagnantProducts = [];
+        produtos.forEach(p => {
+            if(calculaEstoqueProduto(p.codigo) > 0) {
+                const lastSale = movimentos.filter(m => m.tipo === 'saida' && m.produto === p.codigo).sort((a,b) => new Date(b.data) - new Date(a.data))[0];
+                let diasSemVenda = lastSale ? Math.floor((hoje - new Date(lastSale.data + 'T12:00:00')) / (1000*60*60*24)) : Infinity;
+                if (diasSemVenda > STAGNANT_STOCK_DAYS) {
+                    stagnantProducts.push({nome: p.nome, dias: diasSemVenda});
+                }
+            }
+        });
+        if(stagnantProducts.length > 0) {
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-moon-stars-fill text-danger me-2"></i><strong>${stagnantProducts.length} produto(s)</strong> parados há mais de ${STAGNANT_STOCK_DAYS} dias.</a>`;
+            notifications.push(item);
+        }
+
+        // Estoque Negativo
+        const negativeStockProducts = produtos.filter(p => calculaEstoqueProduto(p.codigo) < 0);
+        if(negativeStockProducts.length > 0) {
+             const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-x-octagon-fill text-danger me-2"></i><strong>${negativeStockProducts.length} produto(s)</strong> com estoque negativo!</a>`;
+            notifications.push(item);
+        }
+
+        // Custo > Preço
+        const priceIssueProducts = produtos.filter(p => (p.custo || 0) > (p.dist || 0));
+        if(priceIssueProducts.length > 0) {
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-cash-coin text-warning me-2"></i><strong>${priceIssueProducts.length} produto(s)</strong> com custo maior que o preço de distribuição.</a>`;
+            notifications.push(item);
+        }
+
+        // Atualiza a UI
+        if (notifications.length > 0) {
+            notifications.forEach(n => notificationList.appendChild(n));
+            badge.textContent = notifications.length;
+            badge.classList.remove('d-none');
+            showToast(`Você tem ${notifications.length} nova(s) notificação(ões).`, 'info');
+        } else {
+            badge.classList.add('d-none');
+            notificationList.innerHTML = '<li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>';
+        }
+    }
+
   </script>
 </body>
 </html>
+

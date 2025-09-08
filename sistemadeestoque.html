@@ -552,7 +552,7 @@
           <h5 class="mb-3">Lançamentos de Entrada</h5>
           <div class="table-responsive">
             <table class="table table-striped table-sm" id="tabelaEntradas" style="width:100%">
-              <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
+              <thead><tr><th>#</th><th>Data</th><th>Código</th><th>Produto</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -587,7 +587,7 @@
                 <h5 class="mb-3">Lançamentos de Saída</h5>
                 <div class="table-responsive">
                     <table class="table table-striped table-sm" id="tabelaSaidas" style="width:100%">
-                        <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Loja</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
+                        <thead><tr><th>#</th><th>Data</th><th>Código</th><th>Produto</th><th>Loja</th><th>Qtde</th><th>Tabela</th><th>Valor Total (R$)</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -993,6 +993,7 @@
     let movimentos = load(KEY_MOVES);
     let alocacoes = load(KEY_ALLOC); if(!alocacoes || typeof alocacoes!=='object' || Array.isArray(alocacoes)) alocacoes = {};
     let priceTables = load(KEY_PRICETABLES); if(!priceTables || typeof priceTables!=='object' || Array.isArray(priceTables)) priceTables = {};
+    let tempAlocacoes = {}; // Para o cálculo do relatório FULL
 
 
     // ===== Elementos da UI e Instâncias =====
@@ -1031,6 +1032,7 @@
       bindFullReportControls();
       bindQuickEditor();
       bindHeaderActions();
+      migrateMovementsId(); // Garante que movimentos antigos tenham ID
 
       // Define datas padrão para os filtros
       const today = new Date().toISOString().slice(0,10);
@@ -1558,7 +1560,9 @@
       const data=document.getElementById('eData').value;
       const obs=document.getElementById('eObs').value.trim();
       if(!produto||quantidade<=0||!data){ showToast('Preencha os campos corretamente.', 'danger'); return; }
-      movimentos.push({tipo:'entrada', produto, quantidade, data, obs});
+      
+      const newId = getNextMovementId();
+      movimentos.push({id: newId, tipo:'entrada', produto, quantidade, data, obs});
       save(KEY_MOVES, movimentos); renderAll(); clearFormEntrada();
       showToast('Entrada registrada.', 'success');
     }
@@ -1576,7 +1580,8 @@
       
       const estoque=calculaEstoqueProduto(produto);
       const proceed = () => {
-        movimentos.push({tipo:'saida', produto, quantidade, data, loja, obs, tabelaPreco});
+        const newId = getNextMovementId();
+        movimentos.push({id: newId, tipo:'saida', produto, quantidade, data, loja, obs, tabelaPreco});
         save(KEY_MOVES, movimentos); renderAll(); clearFormSaida();
         showToast('Saída registrada.', 'success');
       };
@@ -1702,13 +1707,13 @@
         const instanceName = type === 'entrada' ? 'entradas' : 'saidas';
 
         const movimentosFiltrados = movimentos.map((m, index) => ({...m, originalIndex: index}))
-                                             .filter(m => m.tipo === type)
-                                             .sort((a, b) => new Date(b.data) - new Date(a.data));
+                                             .filter(m => m.tipo === type);
 
         const data = movimentosFiltrados.map(m => {
             const prod = produtos.find(p => p.codigo === m.produto);
             const loja = lojas.find(l => l.codigo === m.loja);
             const baseData = {
+                id: m.id || m.originalIndex + 1,
                 data: m.data,
                 codigo: prod ? prod.codigo : '-',
                 produto: prod ? prod.nome : `[${m.produto}]`,
@@ -1721,6 +1726,10 @@
             };
             if (type === 'saida') {
                 baseData.loja = loja ? loja.nome : `[${m.loja}]`;
+                const valorTotal = m.quantidade * getEffectivePrice(m.produto, m.tabelaPreco || 'empresa');
+                const tabelaNome = m.tabelaPreco === 'empresa' ? 'Padrão' : (m.tabelaPreco || '').charAt(0).toUpperCase() + (m.tabelaPreco || '').slice(1);
+                baseData.tabelaPreco = tabelaNome;
+                baseData.valorTotal = valorTotal;
             }
             return baseData;
         });
@@ -1999,7 +2008,7 @@
         // --- Tabela: Últimos Movimentos ---
         const ultimosMovimentosBody = document.getElementById('ultimosMovimentosBody');
         ultimosMovimentosBody.innerHTML = '';
-        const ultimos = [...movimentos].sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 10);
+        const ultimos = [...movimentos].sort((a, b) => (b.id || 0) - (a.id || 0)).slice(0, 10);
         if (ultimos.length === 0) {
             ultimosMovimentosBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum movimento registrado.</td></tr>';
         } else {
@@ -2504,6 +2513,9 @@
             container.innerHTML = '<div class="text-muted">Cadastre produtos e lojas para usar o relatório FULL.</div>';
             return;
         }
+        
+        // Inicializa o objeto temporário para o cálculo dos totais
+        tempAlocacoes = JSON.parse(JSON.stringify(alocacoes));
 
         const tableHTML = `
             <table class="table table-bordered table-striped table-sm w-100" id="tRelFullAnalitico">
@@ -2562,8 +2574,7 @@
                     let totalProdQtde = 0;
                     
                     lojas.forEach((l, index) => {
-                        const input = $(api.row(i).node()).find(`input[data-produto="${productCode}"][data-loja="${l.codigo}"]`);
-                        const qtd = parseInt(input.val(), 10) || 0;
+                        const qtd = (tempAlocacoes[l.codigo] && tempAlocacoes[l.codigo][productCode]) ? Number(tempAlocacoes[l.codigo][productCode]) : 0;
                         columnTotals[index].qtde += qtd;
                         columnTotals[index].valor += qtd * (prod.dist || 0);
                         totalProdQtde += qtd;
@@ -2573,9 +2584,13 @@
                     grandTotalQtde += totalProdQtde;
                     grandTotalValor += totalProdValor;
                     
-                    const node = api.row(i).node();
-                    $(node).find('td').eq(lojas.length + 1).html(totalProdQtde);
-                    $(node).find('td').eq(lojas.length + 2).html(`R$ ${totalProdValor.toFixed(2)}`);
+                    // Atualiza totais de linha apenas para as linhas visíveis
+                    const rowIndex = display.indexOf(i);
+                    if (rowIndex > -1) {
+                      const node = api.row(i).node();
+                      $(node).find('td').eq(lojas.length + 1).html(totalProdQtde);
+                      $(node).find('td').eq(lojas.length + 2).html(`R$ ${totalProdValor.toFixed(2)}`);
+                    }
                 });
 
                 // Update footer
@@ -2591,6 +2606,11 @@
         
         // Trigger calculation on input change
         $('#tRelFullAnalitico tbody').on('change', 'input', function () {
+            const loja = this.dataset.loja;
+            const produto = this.dataset.produto;
+            const qtd = Number(this.value);
+            if(!tempAlocacoes[loja]) tempAlocacoes[loja] = {};
+            tempAlocacoes[loja][produto] = qtd;
             dtInstances.relFullAnalitico.draw(false);
         });
     }
@@ -2653,12 +2673,7 @@
 
 
     function salvarAlocacoesFromGrid(){
-      const allInputs = document.querySelectorAll('#tRelFullAnalitico input[type="number"][data-produto]');
-      if (allInputs.length === 0) {
-          showToast('Mude para o modo Analítico para editar as alocações.', 'info');
-          return;
-      }
-      allInputs.forEach(inp=> setAlloc(inp.dataset.loja, inp.dataset.produto, Number(inp.value||0)));
+      alocacoes = JSON.parse(JSON.stringify(tempAlocacoes));
       save(KEY_ALLOC, alocacoes); 
       dtInstances.relFullAnalitico.draw(false);
       showToast('Alocações salvas.', 'success');
@@ -2667,6 +2682,7 @@
     function limparAlocacoes() {
         showConfirmationModal('Tem certeza que deseja limpar TODAS as alocações do relatório FULL?', () => {
             alocacoes = {};
+            tempAlocacoes = {};
             save(KEY_ALLOC, alocacoes);
             renderRelFull();
             showToast('Alocações limpas com sucesso.', 'success');
@@ -2956,10 +2972,11 @@
         showConfirmationModal(confirmationMessage, () => {
             adjustments.forEach(adj => {
                 const obs = `Ajuste de contagem. Sistema: ${adj.sistema}, Contado: ${adj.contado}`;
+                const newId = getNextMovementId();
                 if (adj.diferenca > 0) {
-                    movimentos.push({ tipo: 'entrada', produto: adj.produto, quantidade: adj.diferenca, data: today, obs });
+                    movimentos.push({ id: newId, tipo: 'entrada', produto: adj.produto, quantidade: adj.diferenca, data: today, obs });
                 } else {
-                    movimentos.push({ tipo: 'saida', produto: adj.produto, quantidade: Math.abs(adj.diferenca), data: today, obs, loja: null, tabelaPreco: null });
+                    movimentos.push({ id: newId, tipo: 'saida', produto: adj.produto, quantidade: Math.abs(adj.diferenca), data: today, obs, loja: null, tabelaPreco: null });
                 }
             });
             save(KEY_MOVES, movimentos);
@@ -2990,6 +3007,7 @@
         dtInstances.entradas = new DataTable('#tabelaEntradas', {
             responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
             columns: [
+                { data: 'id' },
                 { data: 'data', render: (data) => new Date(data + 'T12:00:00').toLocaleDateString() }, 
                 {data: 'codigo'}, { data: 'produto' }, { data: 'quantidade' },
                 { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
@@ -2998,9 +3016,16 @@
         dtInstances.saidas = new DataTable('#tabelaSaidas', {
             responsive: true, language: dtLang, pageLength: 5, lengthMenu: [5,10,25], order: [[0, 'desc']],
             columns: [
+                { data: 'id' },
                 { data: 'data', render: (data) => new Date(data + 'T12:00:00').toLocaleDateString() }, 
-                {data: 'codigo'}, { data: 'produto' }, { data: 'loja' }, { data: 'quantidade' },
-                { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
+                {data: 'codigo'}, 
+                { data: 'produto' }, 
+                { data: 'loja' }, 
+                { data: 'quantidade' },
+                { data: 'tabelaPreco' },
+                { data: 'valorTotal', render: $.fn.dataTable.render.number('.', ',', 2, 'R$ ') },
+                { data: 'obs' }, 
+                { data: 'acoes', orderable: false, searchable: false }
             ]
         });
         dtInstances.tabelaPrecos = new DataTable('#tabelaPrecosCustom', {
@@ -3111,7 +3136,8 @@
         const data = document.getElementById('qrDataEntrada').value;
         const obs = document.getElementById('qrObsEntrada').value.trim();
         if (!produto || quantidade <= 0 || !data) { showToast('Preencha os campos corretamente.', 'danger'); return; }
-        movimentos.push({ tipo: 'entrada', produto, quantidade, data, obs });
+        const newId = getNextMovementId();
+        movimentos.push({ id: newId, tipo: 'entrada', produto, quantidade, data, obs });
         save(KEY_MOVES, movimentos);
         renderAll();
         e.target.reset();
@@ -3132,7 +3158,8 @@
 
         const estoque = calculaEstoqueProduto(produto);
         const proceed = () => {
-            movimentos.push({ tipo: 'saida', produto, quantidade, data, loja, obs, tabelaPreco });
+            const newId = getNextMovementId();
+            movimentos.push({ id: newId, tipo: 'saida', produto, quantidade, data, loja, obs, tabelaPreco });
             save(KEY_MOVES, movimentos);
             renderAll();
             e.target.reset();
@@ -3152,20 +3179,17 @@
         const notificationList = document.getElementById('notificationList');
         const badge = document.getElementById('notificationBadge');
         notificationList.innerHTML = '';
-        let notificationCount = 0;
+        let notifications = [];
 
-        // Alerta de Estoque Baixo
+        // Estoque Baixo
         const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
         if(produtosBaixoEstoque.length > 0) {
-            notificationCount += produtosBaixoEstoque.length;
-            produtosBaixoEstoque.forEach(p => {
-                const li = document.createElement('li');
-                li.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>Estoque Baixo:</strong> ${p.nome} (Restam: ${calculaEstoqueProduto(p.codigo)})</a>`;
-                notificationList.appendChild(li);
-            });
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>${produtosBaixoEstoque.length} produto(s)</strong> com estoque baixo.</a>`;
+            notifications.push(item);
         }
 
-        // Alerta de Estoque Parado
+        // Estoque Parado
         const hoje = new Date();
         const stagnantProducts = [];
         produtos.forEach(p => {
@@ -3177,27 +3201,59 @@
                 }
             }
         });
-        
         if(stagnantProducts.length > 0) {
-            if(notificationCount > 0) notificationList.innerHTML += '<li><hr class="dropdown-divider"></li>';
-            notificationCount += stagnantProducts.length;
-            stagnantProducts.forEach(p => {
-                 const li = document.createElement('li');
-                li.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-moon-stars-fill text-danger me-2"></i><strong>Estoque Parado:</strong> ${p.nome} (${p.dias} dias)</a>`;
-                notificationList.appendChild(li);
-            });
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-moon-stars-fill text-danger me-2"></i><strong>${stagnantProducts.length} produto(s)</strong> parados há mais de ${STAGNANT_STOCK_DAYS} dias.</a>`;
+            notifications.push(item);
         }
-        
-        // Atualiza Badge
-        if (notificationCount > 0) {
-            badge.textContent = notificationCount;
+
+        // Estoque Negativo
+        const negativeStockProducts = produtos.filter(p => calculaEstoqueProduto(p.codigo) < 0);
+        if(negativeStockProducts.length > 0) {
+             const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-x-octagon-fill text-danger me-2"></i><strong>${negativeStockProducts.length} produto(s)</strong> com estoque negativo!</a>`;
+            notifications.push(item);
+        }
+
+        // Custo > Preço
+        const priceIssueProducts = produtos.filter(p => (p.custo || 0) > (p.dist || 0));
+        if(priceIssueProducts.length > 0) {
+            const item = document.createElement('li');
+            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-cash-coin text-warning me-2"></i><strong>${priceIssueProducts.length} produto(s)</strong> com custo maior que o preço de distribuição.</a>`;
+            notifications.push(item);
+        }
+
+        // Atualiza a UI
+        if (notifications.length > 0) {
+            notifications.forEach(n => notificationList.appendChild(n));
+            badge.textContent = notifications.length;
             badge.classList.remove('d-none');
+            showToast(`Você tem ${notifications.length} nova(s) notificação(ões).`, 'info');
         } else {
             badge.classList.add('d-none');
             notificationList.innerHTML = '<li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>';
         }
     }
 
+    function getNextMovementId() {
+      if (!movimentos || movimentos.length === 0) return 1;
+      return Math.max(...movimentos.map(m => m.id || 0)) + 1;
+    }
+
+    function migrateMovementsId() {
+        let needsSave = false;
+        if(movimentos.some(m => !m.hasOwnProperty('id'))) {
+            movimentos.forEach((m, index) => {
+                if(!m.hasOwnProperty('id')){
+                    m.id = index + 1; // Atribuição inicial para dados antigos
+                    needsSave = true;
+                }
+            });
+        }
+        if(needsSave) save(KEY_MOVES, movimentos);
+    }
+
   </script>
 </body>
 </html>
+

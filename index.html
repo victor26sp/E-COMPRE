@@ -587,7 +587,7 @@
                 <h5 class="mb-3">Lançamentos de Saída</h5>
                 <div class="table-responsive">
                     <table class="table table-striped table-sm" id="tabelaSaidas" style="width:100%">
-                        <thead><tr><th>#</th><th>Data</th><th>Código</th><th>Produto</th><th>Loja</th><th>Qtde</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
+                        <thead><tr><th>#</th><th>Data</th><th>Código</th><th>Produto</th><th>Loja</th><th>Qtde</th><th>Tabela</th><th>Valor Total (R$)</th><th>Obs.</th><th style="min-width:120px">Ações</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -1726,6 +1726,10 @@
             };
             if (type === 'saida') {
                 baseData.loja = loja ? loja.nome : `[${m.loja}]`;
+                const valorTotal = m.quantidade * getEffectivePrice(m.produto, m.tabelaPreco || 'empresa');
+                const tabelaNome = m.tabelaPreco === 'empresa' ? 'Padrão' : (m.tabelaPreco || '').charAt(0).toUpperCase() + (m.tabelaPreco || '').slice(1);
+                baseData.tabelaPreco = tabelaNome;
+                baseData.valorTotal = valorTotal;
             }
             return baseData;
         });
@@ -3014,8 +3018,14 @@
             columns: [
                 { data: 'id' },
                 { data: 'data', render: (data) => new Date(data + 'T12:00:00').toLocaleDateString() }, 
-                {data: 'codigo'}, { data: 'produto' }, { data: 'loja' }, { data: 'quantidade' },
-                { data: 'obs' }, { data: 'acoes', orderable: false, searchable: false }
+                {data: 'codigo'}, 
+                { data: 'produto' }, 
+                { data: 'loja' }, 
+                { data: 'quantidade' },
+                { data: 'tabelaPreco' },
+                { data: 'valorTotal', render: $.fn.dataTable.render.number('.', ',', 2, 'R$ ') },
+                { data: 'obs' }, 
+                { data: 'acoes', orderable: false, searchable: false }
             ]
         });
         dtInstances.tabelaPrecos = new DataTable('#tabelaPrecosCustom', {

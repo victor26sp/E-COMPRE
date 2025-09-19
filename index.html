@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel - Sistema de Controle de Estoque (v20 - Central de Notificações)</title>
+  <title>Painel - Sistema de Controle de Estoque (v21 - Relatório Sem Venda)</title>
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
 
@@ -266,6 +266,7 @@
             <a class="nav-link" data-tab="relatorio-entradas"><i class="bi bi-arrow-down-circle"></i> <span>Rel. Entradas</span></a>
             <a class="nav-link" data-tab="relatorio-saidas"><i class="bi bi-arrow-up-circle"></i> <span>Rel. Saídas</span></a>
             <a class="nav-link" data-tab="relatorio-saida-individual"><i class="bi bi-person-bounding-box"></i> <span>Rel. Saída Individual</span></a>
+            <a class="nav-link" data-tab="relatorio-sem-venda"><i class="bi bi-tag-slash"></i> <span>Rel. Sem Venda</span></a>
             <a class="nav-link" data-tab="relatorio-estoque"><i class="bi bi-clipboard-data"></i> <span>Rel. Estoque</span></a>
             <a class="nav-link" data-tab="relatorio-full"><i class="bi bi-table"></i> <span>Rel. FULL</span></a>
           </ul>
@@ -793,6 +794,33 @@
         <div id="relSaidaIndividualGrid"></div>
       </div></div>
     </section>
+    
+     <!-- Relatório Produtos Sem Venda -->
+    <section id="relatorio-sem-venda" class="tab-page d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h3>Relatório de Produtos Sem Venda</h3>
+      </div>
+       <div class="d-flex flex-wrap gap-2 align-items-end p-3 bg-light border rounded mb-3">
+          <div>
+              <label for="rsdias" class="form-label small">Período sem vendas (dias)</label>
+              <select id="rsdias" class="form-select">
+                  <option value="10">10 dias</option>
+                  <option value="15">15 dias</option>
+                  <option value="20">20 dias</option>
+                  <option value="30" selected>30 dias</option>
+                  <option value="60">60 dias</option>
+                  <option value="90">90 dias</option>
+              </select>
+          </div>
+          <div class="align-self-end">
+              <button id="btnGerarRelSemVenda" class="btn btn-primary">Gerar</button>
+              <button id="btnExportPdfSemVenda" class="btn btn-outline-primary">Exportar PDF</button>
+          </div>
+      </div>
+      <div class="card"><div class="card-body report-grid">
+        <div id="relSemVendaGrid"></div>
+      </div></div>
+    </section>
 
     <!-- Relatório FULL -->
     <section id="relatorio-full" class="tab-page d-none">
@@ -1102,6 +1130,9 @@
             const rsi = document.getElementById('relSaidaIndividualGrid');
             if(!rsi.innerHTML.trim()) gerarRelatorioSaidaIndividual();
             break;
+        case 'relatorio-sem-venda':
+             if(!document.getElementById('relSemVendaGrid').innerHTML.trim()) gerarRelatorioSemVenda();
+            break;
       }
     }
     function getActiveTab(){ 
@@ -1241,6 +1272,9 @@
       document.getElementById('btnExportPdfRelEntradas').addEventListener('click', e=>{ e.preventDefault(); exportarPDFEntrada(); });
       document.getElementById('btnGerarRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorioSaidaIndividual(); });
       document.getElementById('btnExportPdfRelSaidaIndividual').addEventListener('click', e=>{ e.preventDefault(); exportarPDFSaidaIndividual(); });
+      document.getElementById('btnGerarRelSemVenda').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorioSemVenda(); });
+      document.getElementById('btnExportPdfSemVenda').addEventListener('click', e=>{ e.preventDefault(); exportarPDFSemVenda(); });
+
 
       document.getElementById('btnSalvarAlloc').addEventListener('click', e=>{ e.preventDefault(); salvarAlocacoesFromGrid(); });
       document.getElementById('btnLimparAlloc').addEventListener('click', e => { e.preventDefault(); limparAlocacoes(); });
@@ -2489,6 +2523,131 @@
         doc.save(`relatorio_saida_resumido_${inicio}_a_${fim}.pdf`);
     }
 
+    // ===== Relatório Produtos Sem Venda (NOVO) =====
+    function gerarRelatorioSemVenda() {
+        const diasSemVendaFiltro = Number(document.getElementById('rsdias').value);
+        const container = document.getElementById('relSemVendaGrid');
+        container.innerHTML = '';
+        const hoje = new Date();
+
+        let produtosSemVenda = [];
+
+        produtos.forEach(p => {
+            const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            if (estoqueAtual > 0) {
+                const ultimaVenda = movimentos
+                    .filter(m => m.tipo === 'saida' && m.produto === p.codigo)
+                    .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+                
+                let diasSemVenda = Infinity;
+                if (ultimaVenda) {
+                    diasSemVenda = Math.floor((hoje - new Date(ultimaVenda.data + 'T12:00:00')) / (1000 * 60 * 60 * 24));
+                }
+
+                if (diasSemVenda >= diasSemVendaFiltro) {
+                    produtosSemVenda.push({
+                        codigo: p.codigo,
+                        nome: p.nome,
+                        estoque: estoqueAtual,
+                        diasSemVenda: ultimaVenda ? diasSemVenda : 'Nenhuma'
+                    });
+                }
+            }
+        });
+
+        if (produtosSemVenda.length === 0) {
+            container.textContent = `Nenhum produto com estoque encontrado sem vendas há mais de ${diasSemVendaFiltro} dias.`;
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.id = 'tabelaSemVenda'; // ID para o DataTable
+        table.className = 'table table-bordered table-striped table-sm w-100';
+        
+        const thead = table.createTHead();
+        thead.insertRow().innerHTML = '<th>Código</th><th>Produto</th><th>Estoque Atual</th><th>Dias Sem Venda</th>';
+        
+        container.appendChild(table);
+
+        const data = produtosSemVenda.map(p => ({
+            ...p,
+            diasSemVenda: p.diasSemVenda === 'Nenhuma' ? Infinity : p.diasSemVenda
+        }));
+
+        if (dtInstances.relSemVenda) dtInstances.relSemVenda.destroy();
+        dtInstances.relSemVenda = new DataTable('#tabelaSemVenda', { 
+            data: data,
+            columns: [
+                { data: 'codigo' }, 
+                { data: 'nome' }, 
+                { data: 'estoque' },
+                { data: 'diasSemVenda', render: (data) => data === Infinity ? 'Nenhuma' : data }
+            ],
+            responsive: true, 
+            language: dtLang, 
+            pageLength: 10, 
+            lengthMenu: [10, 25, 50],
+            order: [[3, 'desc']]
+        });
+    }
+
+    function exportarPDFSemVenda() {
+        const diasSemVendaFiltro = Number(document.getElementById('rsdias').value);
+        const hoje = new Date();
+        let produtosSemVenda = [];
+
+        produtos.forEach(p => {
+            const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            if (estoqueAtual > 0) {
+                const ultimaVenda = movimentos
+                    .filter(m => m.tipo === 'saida' && m.produto === p.codigo)
+                    .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+                
+                let diasSemVenda = Infinity;
+                if (ultimaVenda) {
+                    diasSemVenda = Math.floor((hoje - new Date(ultimaVenda.data + 'T12:00:00')) / (1000 * 60 * 60 * 24));
+                }
+
+                if (diasSemVenda >= diasSemVendaFiltro) {
+                    produtosSemVenda.push({
+                        codigo: p.codigo,
+                        nome: p.nome,
+                        estoque: estoqueAtual,
+                        diasSemVenda: ultimaVenda ? diasSemVenda.toString() : 'Nenhuma'
+                    });
+                }
+            }
+        });
+
+        if (produtosSemVenda.length === 0) {
+            showToast('Nenhum produto para exportar.', 'info');
+            return;
+        }
+        
+        produtosSemVenda.sort((a,b) => (b.diasSemVenda === 'Nenhuma' ? -1 : a.diasSemVenda === 'Nenhuma' ? 1 : b.diasSemVenda - a.diasSemVenda));
+
+        const head = [['Código', 'Produto', 'Estoque Atual', 'Dias Sem Venda']];
+        const body = produtosSemVenda.map(p => [
+            p.codigo,
+            truncateText(p.nome, 45),
+            p.estoque,
+            p.diasSemVenda
+        ]);
+        
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+        doc.setFontSize(14);
+        doc.text(`Relatório de Produtos Sem Venda (> ${diasSemVendaFiltro} dias)`, 40, 40);
+        doc.autoTable({
+            startY: 60,
+            head: head,
+            body: body,
+            styles: { fontSize: 9, cellPadding: 5 },
+            headStyles: { fillColor: [13, 110, 253], textColor: 255, fontStyle: 'bold' },
+            margin: { left: 40, right: 40 }
+        });
+        doc.save(`relatorio_sem_venda_${diasSemVendaFiltro}dias.pdf`);
+    }
+
 
     // ===== Relatório FULL (Analítico e Sintético) =====
     function getAlloc(loja, prod){ if(!alocacoes[loja]) return 0; return Number(alocacoes[loja][prod]||0); }
@@ -3043,6 +3202,13 @@
                  { data: 'diferenca', orderable: false, searchable: false }
              ]
         });
+        dtInstances.relSemVenda = new DataTable('#tabelaSemVenda', {
+             responsive: true, language: dtLang, pageLength: 10, lengthMenu: [10, 25, 50],
+             columns: [
+                 { data: 'codigo' }, { data: 'nome' }, { data: 'estoque' },
+                 { data: 'diasSemVenda' }
+             ]
+        });
     }
 
     function updateDataTable(instance, data) {
@@ -3256,3 +3422,4 @@
   </script>
 </body>
 </html>
+

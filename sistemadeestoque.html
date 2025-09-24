@@ -741,6 +741,7 @@
           <input id="rInicio" type="date" class="form-control">
           <input id="rFim" type="date" class="form-control">
           <button id="btnGerarRel" class="btn btn-primary">Gerar</button>
+          <button id="btnCustomizeStoreOrder" class="btn btn-outline-secondary">Personalizar Ordem</button>
           <button id="btnExportRel" class="btn btn-outline-secondary">Exportar CSV</button>
           <button id="btnExportPdfRel" class="btn btn-outline-primary">Exportar PDF (A4 paisagem)</button>
         </div>
@@ -972,6 +973,29 @@
     </div>
   </div>
 
+  <!-- Modal de Ordem das Lojas -->
+  <div class="modal fade" id="storeOrderModal" tabindex="-1" aria-labelledby="storeOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="storeOrderModalLabel">Personalizar Ordem das Lojas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small">Arraste e solte as lojas para reordenar as colunas no relatório.</p>
+          <ul id="storeOrderList" class="list-group">
+            <!-- Lojas serão inseridas aqui via JS -->
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btnResetStoreOrder">Resetar Ordem</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveStoreOrder">Salvar Ordem</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal do Leitor de QR Code -->
   <div class="modal fade" id="qrScannerModal" tabindex="-1" aria-labelledby="qrScannerModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -1012,6 +1036,7 @@
     const KEY_AUTOBACK = 'estoque_autobackup_v13';
     const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
     const KEY_THEME = 'estoque_theme_v18';
+    const KEY_STORE_ORDER = 'estoque_store_order_v21';
     const LOW_STOCK_THRESHOLD = 10;
     const STAGNANT_STOCK_DAYS = 90;
 
@@ -1029,6 +1054,7 @@
     const tabs = document.querySelectorAll('.tab-page');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
     const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+    const storeOrderModal = new bootstrap.Modal(document.getElementById('storeOrderModal'));
     const dtInstances = {}; // Armazena instâncias do DataTables
     let saidasPorLojaChart, vendasDiariasChartInstance;
     let html5QrCode;
@@ -1265,6 +1291,12 @@
       document.getElementById('btnApplyStockCount').addEventListener('click', applyStockCountAdjustments);
 
       document.getElementById('btnGerarRel').addEventListener('click', e=>{ e.preventDefault(); gerarRelatorio(); });
+      document.getElementById('btnCustomizeStoreOrder').addEventListener('click', () => {
+        populateStoreOrderModal();
+        storeOrderModal.show();
+      });
+      document.getElementById('btnSaveStoreOrder').addEventListener('click', saveStoreOrder);
+      document.getElementById('btnResetStoreOrder').addEventListener('click', resetStoreOrder);
       document.getElementById('btnExportRel').addEventListener('click', e=>{ e.preventDefault(); exportarCSV(); });
       document.getElementById('btnExportPdfRel').addEventListener('click', e=>{ e.preventDefault(); exportarPDFRelatorio(); });
       document.getElementById('btnExportPdfEst').addEventListener('click', e=>{ e.preventDefault(); exportarPDFEstoque(); });
@@ -2074,7 +2106,9 @@
       const saidas = movimentos.filter(m=> m.tipo==='saida' && m.data>=inicio && m.data<=fim);
       const dates = []; let d=new Date(inicio); const end=new Date(fim);
       while(d<=end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
-      const cols = lojas.length>0? lojas : [{codigo:'', nome:'Sem Loja'}];
+      let cols = getOrderedStores();
+      if (cols.length === 0) cols = [{codigo:'', nome:'Sem Loja'}];
+
       const grid = {}; dates.forEach(dt=> grid[dt]={});
       const columnTotals = new Array(cols.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
       let grandTotalValor = 0;
@@ -2137,7 +2171,10 @@
       const saidas = movimentos.filter(m=> m.tipo==='saida' && m.data>=inicio && m.data<=fim);
       const dates = []; let d=new Date(inicio); const end=new Date(fim);
       while(d<=end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
-      const cols = lojas.length>0? lojas : [{codigo:'', nome:'Sem Loja'}];
+      
+      let cols = getOrderedStores();
+      if (cols.length === 0) cols = [{codigo:'', nome:'Sem Loja'}];
+
       const grid = {}; dates.forEach(dt=> grid[dt]={});
       const columnTotals = new Array(cols.length).fill(0).map(() => ({ qtde: 0, valor: 0 }));
       let grandTotalValor = 0;
@@ -3418,8 +3455,94 @@
         }
         if(needsSave) save(KEY_MOVES, movimentos);
     }
+    // ===== Ordem das Lojas Personalizada =====
+    function populateStoreOrderModal() {
+        const list = document.getElementById('storeOrderList');
+        list.innerHTML = '';
+        const orderedStores = getOrderedStores();
 
+        orderedStores.forEach(loja => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.storeCode = loja.codigo;
+            li.draggable = true;
+            li.innerHTML = `
+                <span>${loja.nome}</span>
+                <i class="bi bi-grip-vertical" style="cursor: grab;"></i>
+            `;
+            list.appendChild(li);
+        });
+
+        bindStoreOrderDragDrop();
+    }
+
+    function bindStoreOrderDragDrop() {
+        const list = document.getElementById('storeOrderList');
+        let draggedItem = null;
+
+        list.querySelectorAll('li').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                draggedItem = item;
+                setTimeout(() => item.classList.add('dragging'), 0); // Use class for invisibility
+            });
+
+            item.addEventListener('dragend', () => {
+                 if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null;
+                }
+            });
+
+            item.addEventListener('dragover', e => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(list, e.clientY);
+                if (afterElement == null) {
+                    list.appendChild(draggedItem);
+                } else {
+                    list.insertBefore(draggedItem, afterElement);
+                }
+            });
+        });
+    }
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function saveStoreOrder() {
+        const orderedCodes = [...document.querySelectorAll('#storeOrderList li')].map(li => li.dataset.storeCode);
+        localStorage.setItem(KEY_STORE_ORDER, JSON.stringify(orderedCodes));
+        storeOrderModal.hide();
+        showToast('Ordem das lojas salva com sucesso!', 'success');
+        gerarRelatorio(); // Re-gera o relatório com a nova ordem
+    }
+
+    function resetStoreOrder() {
+        localStorage.removeItem(KEY_STORE_ORDER);
+        storeOrderModal.hide();
+        showToast('Ordem das lojas restaurada para o padrão.', 'info');
+        gerarRelatorio();
+    }
+
+    function getOrderedStores() {
+        const customOrder = load(KEY_STORE_ORDER);
+        if (customOrder && customOrder.length > 0 && customOrder.length === lojas.length) {
+            // Reconstroi o array de lojas na ordem correta
+            const ordered = customOrder.map(code => lojas.find(l => l.codigo === code)).filter(Boolean);
+            // Garante que todas as lojas estão presentes, caso alguma tenha sido adicionada
+            if(ordered.length === lojas.length) return ordered;
+        }
+        return [...lojas]; // Retorna uma cópia da ordem padrão
+    }
   </script>
 </body>
 </html>
-

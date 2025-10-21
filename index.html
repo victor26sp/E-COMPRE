@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel - Sistema de Controle de Estoque (v25 - Melhorias)</title>
+  <title>Painel - Sistema de Controle de Estoque (v26 - Central de Notificações)</title>
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' class='bi bi-cart' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.5A.5.5 0 0 1 .5 1h1.11l.401 1.607L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 2H.5a.5.5 0 0 1-.5-.5zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'/%3E%3C/svg%3E">
 
@@ -134,8 +134,6 @@
     }
     body.sidebar-visible .app-header { margin-left: var(--sidebar-width); }
     #notificationBell .badge { position: absolute; top: 0; right: 0; }
-    #notificationDropdown .dropdown-item { white-space: normal; }
-    #notificationList { max-height: 350px; overflow-y: auto; }
 
     /* Right panel */
     .right-panel{
@@ -206,6 +204,20 @@
       justify-content: center;
       padding: 0;
     }
+
+    /* Estilos da Central de Notificações */
+    .notification-card {
+        border-left-width: 4px;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+    }
+    .notification-card.dismissed {
+        opacity: 0.5;
+    }
+    .notification-card-high { border-left-color: var(--bs-danger); }
+    .notification-card-medium { border-left-color: var(--bs-warning); }
+    .notification-card-low { border-left-color: var(--bs-info); }
+    .notification-actions .btn-sm { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
     
     @media (max-width: 992px){
       body.sidebar-visible .content, body.sidebar-visible .app-header {
@@ -228,21 +240,11 @@
   <header class="app-header">
       <h4 id="pageTitle" class="mb-0">Dashboard</h4>
       <div class="ms-auto">
-          <div class="dropdown">
-              <button id="notificationBell" class="btn btn-outline-secondary position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  <i class="bi bi-bell-fill"></i>
-                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notificationBadge"></span>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdown" style="width: 300px;">
-                  <li><h6 class="dropdown-header">Central de Notificações</h6></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <div id="notificationList">
-                      <li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>
-                  </div>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-center small text-muted" href="#" id="clearNotificationsBtn">Limpar Notificações</a></li>
-              </ul>
-          </div>
+          <!-- O botão agora é apenas um link para a central de notificações -->
+          <button id="notificationBell" class="btn btn-outline-secondary position-relative" type="button" title="Central de Notificações">
+              <i class="bi bi-bell-fill"></i>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notificationBadge"></span>
+          </button>
       </div>
   </header>
 
@@ -258,6 +260,7 @@
     <div class="mb-2 small-muted mt-3">Navegação</div>
     <nav class="nav flex-column mb-3" id="menu">
       <a class="nav-link active" data-tab="dashboard"><i class="bi bi-speedometer2"></i> <span>Dashboard</span></a>
+      <a class="nav-link" data-tab="central-acoes"><i class="bi bi-inbox-fill"></i> <span>Central de Ações</span></a>
       <a class="nav-link" data-tab="produtos"><i class="bi bi-box-seam"></i> <span>Produtos</span></a>
       <a class="nav-link" data-tab="entrada"><i class="bi bi-box-arrow-in-down"></i> <span>Entradas</span></a>
       <a class="nav-link" data-tab="saida"><i class="bi bi-box-arrow-up"></i> <span>Saídas</span></a>
@@ -565,6 +568,20 @@
                 </div>
             </div>
         </div>
+    </section>
+
+    <!-- Super Central de Notificações / Ações -->
+    <section id="central-acoes" class="tab-page d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3>Central de Ações</h3>
+          <div>
+              <button class="btn btn-sm btn-outline-secondary" id="btnRefreshNotifications"><i class="bi bi-arrow-clockwise me-1"></i> Atualizar</button>
+              <button class="btn btn-sm btn-outline-danger" id="btnDismissAllNotifications"><i class="bi bi-check-all me-1"></i> Marcar todas como lidas</button>
+          </div>
+      </div>
+      <div class="row g-3" id="notificationCenterContainer">
+          <!-- As notificações serão inseridas aqui via JS -->
+      </div>
     </section>
 
     <!-- Produtos -->
@@ -1199,6 +1216,7 @@
                   <option value="agencia_shopee">Agência Shopee</option>
                   <option value="agencia_mercadolivre">Agência Mercado Livre</option>
                   <option value="agencia_mercadolivre">Retira</option>
+                  
                 </select>
               </div>
             </div>
@@ -1328,7 +1346,8 @@
     const KEY_PRICETABLES = 'estoque_tabelas_preco_v14';
     const KEY_THEME = 'estoque_theme_v18';
     const KEY_STORE_ORDER = 'estoque_store_order_v21';
-    const KEY_MINUTAS = 'estoque_minutas_v2'; // v2 para incluir produtos
+    const KEY_MINUTAS = 'estoque_minutas_v2';
+    const KEY_DISMISSED_NOTIFICATIONS = 'estoque_notificacoes_lidas_v1'; // Chave para a Central de Notificações
     const LOW_STOCK_THRESHOLD = 10;
     const STAGNANT_STOCK_DAYS = 90;
 
@@ -1339,6 +1358,7 @@
     let alocacoes = load(KEY_ALLOC); if(!alocacoes || typeof alocacoes!=='object' || Array.isArray(alocacoes)) alocacoes = {};
     let priceTables = load(KEY_PRICETABLES); if(!priceTables || typeof priceTables!=='object' || Array.isArray(priceTables)) priceTables = {};
     let minutas = load(KEY_MINUTAS);
+    let dismissedNotifications = load(KEY_DISMISSED_NOTIFICATIONS); if(!Array.isArray(dismissedNotifications)) dismissedNotifications = [];
     let tempAlocacoes = {}; // Para o cálculo do relatório FULL
     let minutaProdutosTemporarios = []; // Para adicionar produtos na minuta
 
@@ -1381,6 +1401,7 @@
       bindQuickEditor();
       bindHeaderActions();
       bindMinutaControls();
+      bindNotificationCenterActions(); // Bind para a nova central
       migrateMovementsId(); // Garante que movimentos antigos tenham ID
 
       // Define datas padrão para os filtros
@@ -1422,7 +1443,7 @@
         showTab(a.dataset.tab);
       }));
     }
-    function showTab(id){
+    function showTab(id, focusData = null){
       if (!id) return; // Se clicou no toggle do menu, não faz nada
       tabs.forEach(t=> t.id===id ? t.classList.remove('d-none') : t.classList.add('d-none'));
       
@@ -1435,7 +1456,14 @@
       // Renderiza conteúdo específico da aba quando ela é aberta
       switch(id) {
         case 'dashboard': renderDashboard(); break;
-        case 'entrada': renderMovimentosTable('entrada'); break;
+        case 'central-acoes': renderNotificationCenter(); break;
+        case 'entrada': 
+            renderMovimentosTable('entrada'); 
+            if(focusData && focusData.produto) {
+                document.getElementById('eProduto').value = focusData.produto;
+                document.getElementById('eQuantidade').focus();
+            }
+            break;
         case 'saida': renderMovimentosTable('saida'); break;
         case 'tabelas-preco': renderTabelasPreco(); break;
         case 'contagem-estoque': renderStockCountTable(); break;
@@ -1665,14 +1693,12 @@
     }
 
     function bindHeaderActions() {
-        document.getElementById('clearNotificationsBtn').addEventListener('click', e => {
+        document.getElementById('notificationBell').addEventListener('click', e => {
             e.preventDefault();
-            e.stopPropagation();
-            const notificationList = document.getElementById('notificationList');
-            const badge = document.getElementById('notificationBadge');
-            notificationList.innerHTML = '<li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>';
-            badge.classList.add('d-none');
-            badge.textContent = '';
+            // Ativa o link do menu para consistência visual
+            menu.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+            menu.querySelector('.nav-link[data-tab="central-acoes"]').classList.add('active');
+            showTab('central-acoes');
         });
     }
 
@@ -2113,7 +2139,7 @@
 
     // Dashboard
     function renderDashboard() {
-        renderNotifications();
+        updateNotificationBadge();
         renderMinutaSummaryCards(); 
         const inicio = document.getElementById('dashInicio').value;
         const fim = document.getElementById('dashFim').value;
@@ -3394,9 +3420,9 @@
             const diff = contado - sistema;
             const diffCell = row.find('.diff-val');
             diffCell.text(diff);
-            diffCell.removeClass('diff-pos diff-neg');
-            if (diff > 0) diffCell.addClass('diff-pos').text(`+${diff}`);
-            else if (diff < 0) diffCell.addClass('diff-neg');
+            diffCell.removeClass('text-success text-danger');
+            if (diff > 0) diffCell.addClass('text-success').text(`+${diff}`);
+            else if (diff < 0) diffCell.addClass('text-danger');
         });
     }
 
@@ -3652,65 +3678,205 @@
         }
     }
     
-    // ===== Notificações =====
-    function renderNotifications() {
-        const notificationList = document.getElementById('notificationList');
-        const badge = document.getElementById('notificationBadge');
-        notificationList.innerHTML = '';
+    // ===== Central de Notificações (Super Central de Ações) =====
+    function bindNotificationCenterActions() {
+      document.getElementById('btnRefreshNotifications').addEventListener('click', renderNotificationCenter);
+      document.getElementById('btnDismissAllNotifications').addEventListener('click', dismissAllNotifications);
+      
+      document.getElementById('notificationCenterContainer').addEventListener('click', e => {
+          const button = e.target.closest('button[data-action]');
+          if(!button) return;
+
+          const { action, id, extra } = button.dataset;
+
+          switch(action) {
+              case 'dismiss':
+                  dismissNotification(id);
+                  break;
+              case 'goToTab':
+                  // Ativa o link do menu para consistência visual
+                  menu.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+                  menu.querySelector(`.nav-link[data-tab="${extra}"]`).classList.add('active');
+                  showTab(extra);
+                  break;
+              case 'goToTabAndFocus':
+                  menu.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+                  menu.querySelector(`.nav-link[data-tab="${extra}"]`).classList.add('active');
+                  showTab(extra, { produto: id.split('_')[1] });
+                  break;
+              case 'goToMinuta':
+                  menu.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+                  menu.querySelector(`.nav-link[data-tab="minutaPage"]`).classList.add('active');
+                  showTab('minutaPage');
+                  // Idealmente, adicionaríamos um destaque ou scroll para a minuta específica
+                  break;
+          }
+      });
+    }
+
+    function generateAllNotifications() {
         let notifications = [];
-
-        // Estoque Baixo
-        const produtosBaixoEstoque = produtos.filter(p => calculaEstoqueProduto(p.codigo) <= LOW_STOCK_THRESHOLD);
-        if(produtosBaixoEstoque.length > 0) {
-            const item = document.createElement('li');
-            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i><strong>${produtosBaixoEstoque.length} produto(s)</strong> com estoque baixo.</a>`;
-            notifications.push(item);
-        }
-
-        // Estoque Parado
         const hoje = new Date();
-        const stagnantProducts = [];
+        const agora = new Date();
+
+        // 1. Estoque Baixo
         produtos.forEach(p => {
-            if(calculaEstoqueProduto(p.codigo) > 0) {
+            const estoque = calculaEstoqueProduto(p.codigo);
+            if (estoque <= LOW_STOCK_THRESHOLD && estoque >= 0) {
+                notifications.push({
+                    id: `lowstock_${p.codigo}`,
+                    type: 'estoque',
+                    priority: 'medium',
+                    icon: 'bi-exclamation-triangle-fill',
+                    title: `Estoque Baixo: ${p.codigo} - ${p.nome}`,
+                    description: `Apenas ${estoque} unidade(s) restante(s). Considere reposição.`,
+                    actions: [
+                        { label: 'Registrar Entrada', action: 'goToTabAndFocus', extra: 'entrada' },
+                        { label: 'Ver Produto', action: 'goToTab', extra: 'produtos' },
+                    ]
+                });
+            }
+        });
+        
+        // 2. Estoque Negativo (Prioridade Alta)
+        produtos.forEach(p => {
+            const estoque = calculaEstoqueProduto(p.codigo);
+            if (estoque < 0) {
+                notifications.push({
+                    id: `negativestock_${p.codigo}`,
+                    type: 'estoque',
+                    priority: 'high',
+                    icon: 'bi-x-octagon-fill',
+                    title: `Estoque Negativo: ${p.codigo} - ${p.nome}`,
+                    description: `Estoque está em ${estoque}. Verifique os lançamentos de entrada e saída.`,
+                    actions: [
+                        { label: 'Corrigir Contagem', action: 'goToTab', extra: 'contagem-estoque' },
+                        { label: 'Ver Produto', action: 'goToTab', extra: 'produtos' },
+                    ]
+                });
+            }
+        });
+
+        // 3. Estoque Parado
+        produtos.forEach(p => {
+            const estoqueAtual = calculaEstoqueProduto(p.codigo);
+            if(estoqueAtual > 0) {
                 const lastSale = movimentos.filter(m => m.tipo === 'saida' && m.produto === p.codigo).sort((a,b) => new Date(b.data) - new Date(a.data))[0];
                 let diasSemVenda = lastSale ? Math.floor((hoje - new Date(lastSale.data + 'T12:00:00')) / (1000*60*60*24)) : Infinity;
                 if (diasSemVenda > STAGNANT_STOCK_DAYS) {
-                    stagnantProducts.push({nome: p.nome, dias: diasSemVenda});
+                    notifications.push({
+                        id: `stagnantstock_${p.codigo}`,
+                        type: 'vendas',
+                        priority: 'medium',
+                        icon: 'bi-moon-stars-fill',
+                        title: `Estoque Parado: ${p.codigo} - ${p.nome}`,
+                        description: `Produto sem vendas há ${diasSemVenda} dias com ${estoqueAtual} un. em estoque.`,
+                        actions: [
+                            { label: 'Criar Promoção', action: 'goToTab', extra: 'tabelas-preco' },
+                            { label: 'Ver Relatório', action: 'goToTab', extra: 'relatorio-sem-venda' },
+                        ]
+                    });
                 }
             }
         });
-        if(stagnantProducts.length > 0) {
-            const item = document.createElement('li');
-            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-moon-stars-fill text-danger me-2"></i><strong>${stagnantProducts.length} produto(s)</strong> parados há mais de ${STAGNANT_STOCK_DAYS} dias.</a>`;
-            notifications.push(item);
-        }
 
-        // Estoque Negativo
-        const negativeStockProducts = produtos.filter(p => calculaEstoqueProduto(p.codigo) < 0);
-        if(negativeStockProducts.length > 0) {
-             const item = document.createElement('li');
-            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-x-octagon-fill text-danger me-2"></i><strong>${negativeStockProducts.length} produto(s)</strong> com estoque negativo!</a>`;
-            notifications.push(item);
-        }
+        // 4. Minutas com Corte Próximo
+        minutas.forEach(m => {
+            const dt = new Date(m.data + 'T' + m.hora + ':00');
+            const diffMs = dt - agora;
+            const minutes = Math.floor(diffMs / 60000);
+            if (diffMs > 0 && diffMs <= (60 * 60 * 1000)) { // 1 hora
+                notifications.push({
+                    id: `minuta_${m.id}`,
+                    type: 'operacional',
+                    priority: 'high',
+                    icon: 'bi-alarm-fill',
+                    title: `Minuta Próxima: ${labelForTipo(m.tipo)} às ${m.hora}`,
+                    description: `O horário de corte é em ${minutes} minuto(s). Verifique os pacotes.`,
+                    actions: [
+                        { label: 'Ver Minuta', action: 'goToMinuta', extra: m.id },
+                        { label: 'Imprimir', action: 'printMinuta', extra: m.id }
+                    ]
+                });
+            }
+        });
 
-        // Custo > Preço
-        const priceIssueProducts = produtos.filter(p => (p.custo || 0) > (p.dist || 0));
-        if(priceIssueProducts.length > 0) {
-            const item = document.createElement('li');
-            item.innerHTML = `<a class="dropdown-item" href="#"><i class="bi bi-cash-coin text-warning me-2"></i><strong>${priceIssueProducts.length} produto(s)</strong> com custo maior que o preço de distribuição.</a>`;
-            notifications.push(item);
-        }
+        return notifications;
+    }
+    
+    function renderNotificationCenter() {
+      const container = document.getElementById('notificationCenterContainer');
+      container.innerHTML = '';
+      const notifications = generateAllNotifications();
+      
+      updateNotificationBadge();
 
-        // Atualiza a UI
-        if (notifications.length > 0) {
-            notifications.forEach(n => notificationList.appendChild(n));
-            badge.textContent = notifications.length;
+      if (notifications.length === 0 || notifications.every(n => dismissedNotifications.includes(n.id))) {
+          container.innerHTML = '<div class="col-12"><div class="card"><div class="card-body text-center text-muted"><i class="bi bi-check-circle fs-3 mb-2"></i><p class="mb-0">Nenhuma notificação importante no momento.</p></div></div></div>';
+          return;
+      }
+      
+      notifications.forEach(n => {
+          const isDismissed = dismissedNotifications.includes(n.id);
+          const priorityMap = { high: 'danger', medium: 'warning', low: 'info' };
+          const actionsHTML = n.actions.map(a => `<button class="btn btn-sm btn-outline-primary" data-action="${a.action}" data-extra="${a.extra}" data-id="${n.id}">${a.label}</button>`).join('');
+
+          const cardHTML = `
+              <div class="col-md-6 col-lg-4">
+                  <div class="card notification-card notification-card-${n.priority} ${isDismissed ? 'dismissed' : ''}" id="card-${n.id}">
+                      <div class="card-body">
+                          <div class="d-flex align-items-start">
+                              <i class="bi ${n.icon} fs-4 text-${priorityMap[n.priority]} me-3"></i>
+                              <div class="flex-grow-1">
+                                  <h6 class="card-title mb-1">${n.title}</h6>
+                                  <p class="card-text small text-muted">${n.description}</p>
+                              </div>
+                              <button class="btn-close btn-sm" data-action="dismiss" data-id="${n.id}" title="Marcar como lida"></button>
+                          </div>
+                          <div class="notification-actions text-end mt-2 pt-2 border-top">
+                              ${actionsHTML}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          `;
+          container.innerHTML += cardHTML;
+      });
+    }
+
+    function updateNotificationBadge() {
+        const badge = document.getElementById('notificationBadge');
+        const unreadNotifications = generateAllNotifications().filter(n => !dismissedNotifications.includes(n.id));
+        const count = unreadNotifications.length;
+
+        if (count > 0) {
+            badge.textContent = count;
             badge.classList.remove('d-none');
         } else {
             badge.classList.add('d-none');
-            notificationList.innerHTML = '<li><a class="dropdown-item text-muted" href="#">Nenhuma notificação</a></li>';
         }
     }
+
+    function dismissNotification(id) {
+        if (!dismissedNotifications.includes(id)) {
+            dismissedNotifications.push(id);
+            save(KEY_DISMISSED_NOTIFICATIONS, dismissedNotifications);
+        }
+        document.getElementById(`card-${id}`)?.classList.add('dismissed');
+        updateNotificationBadge();
+    }
+    
+    function dismissAllNotifications() {
+        const allNotifs = generateAllNotifications();
+        allNotifs.forEach(n => {
+            if (!dismissedNotifications.includes(n.id)) {
+                dismissedNotifications.push(n.id);
+            }
+        });
+        save(KEY_DISMISSED_NOTIFICATIONS, dismissedNotifications);
+        renderNotificationCenter();
+    }
+
 
     function getNextMovementId() {
       if (!movimentos || movimentos.length === 0) return 1;
@@ -4004,6 +4170,10 @@
                     m.notified = true;
                     save(KEY_MINUTAS, minutas);
                     renderMinutaSummaryCards();
+                    // Atualiza a central de ações se ela estiver visível
+                    if (getActiveTab() === 'central-acoes') {
+                        renderNotificationCenter();
+                    }
                 }
             } catch (e) {
                 console.error('Erro ao checar minuta', e);
@@ -4238,3 +4408,4 @@
   </script>
 </body>
 </html>
+

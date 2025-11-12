@@ -225,6 +225,36 @@
       .sidebar{padding:.75rem}
     }
   </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+<style>
+:root[data-bs-theme="dark"] {
+  --bs-body-bg: #121212;
+  --bs-body-color: #e6e6e6;
+  --bs-card-bg: #1e1e1e;
+  --bs-card-border-color: #333;
+  --bs-border-color: #333;
+}
+[data-bs-theme="dark"] .card {
+  background-color: var(--bs-card-bg);
+  border-color: var(--bs-card-border-color);
+}
+[data-bs-theme="dark"] .card-header { opacity: 0.9; }
+[data-bs-theme="dark"] .btn-outline-dark {
+  color: #f8f9fa;
+  border-color: #555;
+}
+[data-bs-theme="dark"] .btn-outline-dark:hover {
+  background-color: #f8f9fa;
+  color: #000;
+}
+.card:hover {
+  transform: translateY(-4px);
+  transition: all 0.3s ease-in-out;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="collapsed-right">
 <div id="left-sidebar-trigger"></div>
@@ -544,17 +574,51 @@
 </div>
 </div>
 </div></section>
-<section class="tab-page d-none" id="central-acoes">
-<div class="d-flex justify-content-between align-items-center mb-3">
-<h3>Central de Ações</h3>
-<div>
-<button class="btn btn-sm btn-outline-secondary" id="btnRefreshNotifications"><i class="bi bi-arrow-clockwise me-1"></i> Atualizar</button>
-<button class="btn btn-sm btn-outline-danger" id="btnDismissAllNotifications"><i class="bi bi-check-all me-1"></i> Marcar todas como lidas</button>
-</div>
-</div>
-<div class="row g-3" id="notificationCenterContainer">
-</div>
+
+<section class="tab-page d-none" id="central-acoes" data-bs-theme="auto">
+  <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+    <h3 class="mb-0 fw-bold text-primary">
+      <i class="bi bi-bell-fill me-2"></i>Central de Ações e Controle de Estoque
+    </h3>
+
+    <div class="d-flex gap-2 align-items-center">
+      <button class="btn btn-sm btn-outline-primary" id="btnRefreshNotifications">
+        <i class="bi bi-arrow-repeat me-1"></i> Atualizar
+      </button>
+      <button class="btn btn-sm btn-outline-secondary" id="btnConfigCentral">
+        <i class="bi bi-gear-fill me-1"></i> Configurações
+      </button>
+      <button class="btn btn-sm btn-outline-danger" id="btnDismissAllNotifications">
+        <i class="bi bi-check-all me-1"></i> Limpar Alertas
+
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <div class="btn-group w-100" id="filterButtons">
+      <button class="btn btn-outline-dark active" data-filter="all">
+        <i class="bi bi-list-ul me-1"></i>Todos
+      </button>
+      <button class="btn btn-outline-danger" data-filter="critico">
+        <i class="bi bi-exclamation-octagon me-1"></i>Críticos
+      </button>
+      <button class="btn btn-outline-warning" data-filter="atencao">
+        <i class="bi bi-exclamation-triangle me-1"></i>Atenção
+      </button>
+      <button class="btn btn-outline-info" data-filter="info">
+        <i class="bi bi-info-circle me-1"></i>Informativos
+      </button>
+    </div>
+  </div>
+
+  <div id="notificationCenterContainer" class="row g-4 animate__animated animate__fadeIn">
+    <div class="col-12 text-center text-muted py-5">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      Nenhuma notificação disponível no momento.
+    </div>
+  </div>
 </section>
+
 <section class="tab-page d-none" id="produtos">
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
 <h3>Produtos</h3>
@@ -1040,6 +1104,85 @@
 </section>
 
 
+
+<!-- Offcanvas: Painel Rápido da Central de Ações (v27.21) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasCentral" aria-labelledby="offcanvasCentralLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasCentralLabel">
+      <i class="bi bi-sliders me-2"></i>Painel Rápido — Central de Ações
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <!-- Configurações Rápidas -->
+    <div class="mb-3">
+      <h6 class="fw-bold mb-2"><i class="bi bi-gear me-1"></i>Configurações</h6>
+      <div class="row g-2">
+        <div class="col-6 d-flex align-items-end">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="cfgSom" checked>
+            <label class="form-check-label small" for="cfgSom">Alertas sonoros</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-2">
+        <button class="btn btn-sm btn-outline-secondary" id="btnAtualizarCentral"><i class="bi bi-arrow-repeat me-1"></i>Atualizar</button>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="mb-3">
+      <h6 class="fw-bold mb-2"><i class="bi bi-graph-up me-1"></i>Estatísticas</h6>
+      <div class="row g-2 text-center">
+        <div class="col-6">
+          <div class="p-2 border rounded">
+            <div class="small text-muted">Produtos</div>
+            <div class="fs-5 fw-bold" id="statProdutos">0</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2 border rounded">
+            <div class="small text-muted">Qtd total</div>
+            <div class="fs-5 fw-bold" id="statQtdTotal">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-2 mt-2 text-center">
+        <div class="col-6">
+          <div class="p-2 border rounded">
+            <div class="small text-muted">Custo total (R$)</div>
+            <div class="fs-6 fw-bold" id="statCustoTotal">0,00</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2 border rounded">
+            <div class="small text-muted">Distribuição total (R$)</div>
+            <div class="fs-6 fw-bold" id="statDistTotal">0,00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="mb-3">
+      <h6 class="fw-bold mb-2"><i class="bi bi-bar-chart-steps me-1"></i>Visão por Categoria</h6>
+      <canvas id="chartCentral" height="180"></canvas>
+      <div class="small text-muted mt-2" id="legendCentral">
+        Normal | Atenção | Crítico | Sem Fornecedor — Quantidade e Valor (Custo R$)
+      </div>
+    </div>
+
+    <!-- Totais por Categoria -->
+    <div class="mt-3">
+      <h6 class="fw-bold mb-2"><i class="bi bi-calculator me-1"></i>Totais por Categoria</h6>
+      <ul class="list-group list-group-flush small" id="totaisPorCategoria">
+        <!-- preenchido via JS -->
+      </ul>
+    </div>
+  </div>
+</div>
 <script>
 (function(){
   const KEY_NCM = 'estoque_ncm_v2';
@@ -5100,6 +5243,8 @@ function btoaUtf8(str) {
     var produtos = [];
     try { produtos = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || []; } catch(e){}
     var grupos = {};
+    var totalGeralQtd = 0, totalGeralCusto = 0, totalGeralDist = 0;
+
     for (var i=0;i<produtos.length;i++){
       var p = produtos[i];
       var f = ((p.fornecedor||'Sem Fornecedor')+'').trim();
@@ -5115,9 +5260,17 @@ function btoaUtf8(str) {
       grupos[f].total_qtd += e;
       grupos[f].total_custo += e*c;
       grupos[f].total_dist += e*d;
+
+      totalGeralQtd += e;
+      totalGeralCusto += e*c;
+      totalGeralDist += e*d;
     }
+
     var out = [];
     for (var k in grupos){ if (grupos.hasOwnProperty(k)) out.push(grupos[k]); }
+
+    // Anexa totais gerais
+    out.totalGeral = { qtd: totalGeralQtd, custo: totalGeralCusto, dist: totalGeralDist };
     return out;
   }
 
@@ -5136,9 +5289,32 @@ function btoaUtf8(str) {
       var doc = new jsPDF({orientation:'p', unit:'pt', format:'a4'});
       var y = margem;
       var agora = new Date();
-      doc.setFontSize(14); doc.text('Relatório de Produtos por Fornecedor', margem, y); y += 18;
-      doc.setFontSize(10); doc.text('Gerado em: ' + agora.toLocaleDateString() + ' ' + agora.toLocaleTimeString(), margem, y); y += 12;
-      doc.setFontSize(12); doc.text('Fornecedor: ' + g.fornecedor, margem, y); y += 10;
+
+      // Cabeçalho principal
+      doc.setFontSize(14);
+      doc.text('Relatório de Produtos por Fornecedor', margem, y); 
+      y += 18;
+      doc.setFontSize(10);
+      doc.text('Gerado em: ' + agora.toLocaleDateString() + ' ' + agora.toLocaleTimeString(), margem, y);
+      y += 12;
+
+      // Bloco de resumo no topo
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margem - 5, y - 10, 550, 60, 'F');
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('Resumo do Fornecedor: ' + (g.fornecedor || '—'), margem, y + 2);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      y += 16;
+      doc.text('Quantidade Total: ' + g.total_qtd, margem, y);
+      y += 14;
+      doc.text('Valor Total (Custo): R$ ' + g.total_custo.toFixed(2), margem, y);
+      y += 14;
+      doc.text('Valor Total (Distribuição): R$ ' + g.total_dist.toFixed(2), margem, y);
+      y += 24;
+
+      // Corpo da tabela
       if (typeof doc.autoTable === 'function'){
         var head = [['Código','Produto','Estoque','Custo','Dist','Tot Custo','Tot Dist']];
         var body = [];
@@ -5150,11 +5326,52 @@ function btoaUtf8(str) {
             it.totalCusto.toFixed(2), it.totalDist.toFixed(2)
           ]);
         }
-        doc.autoTable({ startY:y, head:head, body:body, margin:{ left:margem, right:margem }, styles:{ fontSize:8 }, headStyles:{ fillColor:[13,110,253] } });
+
+        // Rodapé de totais do fornecedor
+        var foot = [[
+          { content: 'TOTAIS DO FORNECEDOR', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: String(g.total_qtd), styles: { fontStyle: 'bold' } },
+          { content: '', styles: { fontStyle: 'bold' } },
+          { content: '', styles: { fontStyle: 'bold' } },
+          { content: 'R$ ' + g.total_custo.toFixed(2), styles: { fontStyle: 'bold' } },
+          { content: 'R$ ' + g.total_dist.toFixed(2), styles: { fontStyle: 'bold' } }
+        ]];
+
+        doc.autoTable({
+          startY: y,
+          head: head,
+          body: body,
+          foot: foot,
+          showFoot: 'everyPage',
+          margin: { left: margem, right: margem },
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [13, 110, 253] },
+          footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' }
+        });
       }
+
+      // Resumo geral (todos os fornecedores)
+      var gTotal = grupos.totalGeral;
+      var endY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 30 : y + 30;
+      doc.setFillColor(220, 220, 220);
+      doc.rect(margem - 5, endY - 15, 550, 60, 'F');
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('RESUMO GERAL DO ESTOQUE (TODOS OS FORNECEDORES)', margem, endY);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      endY += 16;
+      doc.text('Quantidade Total Geral: ' + gTotal.qtd, margem, endY);
+      endY += 14;
+      doc.text('Valor Total Geral (Custo): R$ ' + gTotal.custo.toFixed(2), margem, endY);
+      endY += 14;
+      doc.text('Valor Total Geral (Distribuição): R$ ' + gTotal.dist.toFixed(2), margem, endY);
+
+      // Salvar PDF
       var safe = g.fornecedor.replace(/[^a-z0-9]/gi,'_');
       doc.save('Fornecedor_' + safe + '.pdf');
-      setTimeout(prox, 250);
+
+      setTimeout(prox, 300);
     }
     prox();
   }
@@ -5170,5 +5387,567 @@ function btoaUtf8(str) {
 })();
 </script>
 
+
+<script>
+// ===== Central de Ações e Controle de Estoque (v27.18) =====
+(function(){
+  const CENTRAL_CFG_KEY = 'central_config_v18';
+
+  function getCentralConfig() {
+    try { return JSON.parse(localStorage.getItem(CENTRAL_CFG_KEY)) || { estoqueMinimo: 5, prioridade: 'media', som: false }; }
+    catch(e){ return { estoqueMinimo: 5, prioridade: 'media', som: false }; }
+  }
+  function saveCentralConfig(cfg) {
+    localStorage.setItem(CENTRAL_CFG_KEY, JSON.stringify(cfg));
+  }
+
+  function makeAlert(tipo, msg, prod){
+    return { tipo: tipo, msg: msg, prod: prod || {} };
+  }
+
+  // Lê produtos do storage usando a mesma chave já usada no sistema
+  function getProdutos(){
+    try {
+      const list = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || [];
+      return Array.isArray(list) ? list : [];
+    } catch(e){ return []; }
+  }
+
+  function renderNotificationCenter(filter = 'all') {
+    const produtos = getProdutos();
+    const cfg = getCentralConfig();
+    const container = document.getElementById('notificationCenterContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Construção de alertas automáticos
+    const alerts = [];
+    produtos.forEach(p => {
+      const estoque = Number(p.estoque_calculado || p.qtd || p.estoque || 0);
+      const min = Number(p.estoqueMinimo || cfg.estoqueMinimo || 0);
+      const custo = Number(p.custo || p.valor_custo || 0);
+      const dist  = Number(p.dist || p.valor_dist || 0);
+
+      if (estoque <= 0) alerts.push(makeAlert('critico', `${p.nome||p.codigo||'Produto'} sem estoque!`, p));
+      else if (estoque <= min) alerts.push(makeAlert('atencao', `${p.nome||p.codigo||'Produto'} abaixo do mínimo (${estoque}/${min})`, p));
+
+      if (!p.fornecedor) alerts.push(makeAlert('info', `${p.nome||p.codigo||'Produto'} sem fornecedor definido.`, p));
+      if (custo > dist) alerts.push(makeAlert('atencao', `${p.nome||p.codigo||'Produto'} com custo maior que a distribuição.`, p));
+    });
+
+    // Filtro e render
+    const filtered = (filter === 'all') ? alerts : alerts.filter(a => a.tipo === filter);
+
+    if (!filtered.length) {
+      container.innerHTML = '<div class="text-center text-muted py-4">Nenhuma notificação encontrada.</div>';
+      // Zera badge
+      const badge = document.getElementById('notificationBadge');
+      if (badge) badge.classList.add('d-none');
+      return;
+    }
+
+    // Atualiza badge do sino
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+      badge.textContent = String(filtered.length);
+      badge.classList.remove('d-none');
+    }
+
+    filtered.forEach(a => {
+      const color = a.tipo === 'critico' ? 'danger' : a.tipo === 'atencao' ? 'warning' : 'info';
+      const icon  = a.tipo === 'critico' ? 'bi-exclamation-octagon' : a.tipo === 'atencao' ? 'bi-exclamation-triangle' : 'bi-info-circle';
+      const card = document.createElement('div');
+      card.className = 'col-12 col-md-6 col-lg-4';
+      card.innerHTML = `
+        <div class="card border-${color} shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title text-${color}"><i class="bi ${icon} me-1"></i>${a.msg}</h6>
+            <p class="card-text small mb-2">
+              <b>Produto:</b> ${a.prod.nome || a.prod.codigo || '—'}<br>
+              <b>Estoque:</b> ${a.prod.estoque_calculado || a.prod.qtd || a.prod.estoque || 0}<br>
+              <b>Fornecedor:</b> ${a.prod.fornecedor || '—'}
+            </p>
+            <div class="d-flex justify-content-between">
+              <button class="btn btn-sm btn-outline-primary" data-action="goToTabAndFocus" data-extra="produtos" data-id="${a.prod.codigo || ''}">Abrir Produto</button>
+              <button class="btn btn-sm btn-outline-success" data-action="dismiss">Resolver</button>
+            </div>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function openCentralConfig() {
+    const cfg = getCentralConfig();
+    const novoMin = prompt('Quantidade mínima de estoque para alerta (global):', cfg.estoqueMinimo);
+    if (novoMin !== null) {
+      cfg.estoqueMinimo = Number(novoMin) || 0;
+      saveCentralConfig(cfg);
+      alert('Configuração salva!');
+      renderNotificationCenter();
+    }
+  }
+
+  function bindCentralActions(){
+    const btnRefresh = document.getElementById('btnRefreshNotifications');
+    const btnDismiss = document.getElementById('btnDismissAllNotifications');
+    const btnConfig  = document.getElementById('btnConfigCentral');
+    const filters = document.querySelectorAll('#filterButtons button');
+    const container = document.getElementById('notificationCenterContainer');
+
+    if (btnRefresh) btnRefresh.addEventListener('click', () => renderNotificationCenter());
+    if (btnDismiss) btnDismiss.addEventListener('click', () => {
+      const cont = document.getElementById('notificationCenterContainer');
+      if (cont) cont.innerHTML = '<div class="text-center text-muted py-4">Nenhuma notificação encontrada.</div>';
+      const badge = document.getElementById('notificationBadge');
+      if (badge) badge.classList.add('d-none');
+    });
+    if (btnConfig) btnConfig.addEventListener('click', openCentralConfig);
+
+    filters.forEach(b => b.addEventListener('click', e => {
+      filters.forEach(f => f.classList.remove('active'));
+      e.target.classList.add('active');
+      renderNotificationCenter(e.target.dataset.filter);
+    }));
+
+    if (container) {
+      container.addEventListener('click', function(e){
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (action === 'dismiss') {
+          // Remove o card mais próximo
+          const col = btn.closest('.col-12, .col-md-6, .col-lg-4');
+          if (col) col.remove();
+        }
+        if (action === 'goToTabAndFocus') {
+          // Abre a aba Produtos e foca (compatível com showTab existente)
+          if (window.menu && window.showTab) {
+            document.querySelectorAll('#menu .nav-link').forEach(n=>n.classList.remove('active'));
+            const link = document.querySelector('#menu .nav-link[data-tab="produtos"]');
+            if (link){ link.classList.add('active'); }
+            window.showTab('produtos', { codigo: btn.getAttribute('data-id') });
+          } else {
+            // fallback
+            window.location.hash = '#produtos';
+          }
+        }
+      });
+    }
+  }
+
+  // Integra com o showTab existente sem quebrar outros módulos
+  const __prevShowTab = window.showTab || function(id){
+    document.querySelectorAll('.tab-page').forEach(e=>e.classList.add('d-none'));
+    const el = document.getElementById(id); if (el) el.classList.remove('d-none');
+  };
+  window.showTab = function(id, focusData){
+    __prevShowTab(id, focusData);
+    if (id === 'central-acoes') {
+      bindCentralActions();
+      renderNotificationCenter();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    bindCentralActions();
+    // Atualiza badge ao carregar (estado geral)
+    renderNotificationCenter();
+  });
+})();
+</script>
+
+
+<script>
+// ===== Central de Ações — Painel Rápido + Estatísticas + Som (v27.21) =====
+(function(){
+  const CFG_KEY = 'central_config_v21';
+  const DEFAULT_CFG = { estoqueMinimo: 5, sound: true, autoOpen: true };
+
+  // Base64 beep (short wav)
+  const BEEP_SRC = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA////AP///wD///8A////AP///wD///8A';
+
+  function getCfg(){
+    try { return Object.assign({}, DEFAULT_CFG, JSON.parse(localStorage.getItem(CFG_KEY)||'{}')); }
+    catch(e){ return Object.assign({}, DEFAULT_CFG); }
+  }
+  function saveCfg(cfg){ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+  function getProdutos(){
+    try{
+      const list = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || [];
+      return Array.isArray(list) ? list : [];
+    }catch(e){ return []; }
+  }
+
+  function currency(n){
+    return (Number(n)||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function computeStats(){
+    const cfg = getCfg();
+    const prods = getProdutos();
+    const stats = {
+      totalProdutos: prods.length, qtdTotal: 0, custoTotal: 0, distTotal: 0,
+      categorias: {
+        normal: { count:0, qtd:0, custo:0, dist:0 },
+        atencao: { count:0, qtd:0, custo:0, dist:0 },
+        critico: { count:0, qtd:0, custo:0, dist:0 },
+        semFornecedor: { count:0, qtd:0, custo:0, dist:0 }
+      }
+    };
+    prods.forEach(p=>{
+      const qtd = Number(p.estoque_calculado || p.qtd || p.estoque || 0);
+      const min = Number(p.estoqueMinimo || cfg.estoqueMinimo || 0);
+      const custo = Number(p.custo || p.valor_custo || 0) * qtd;
+      const dist  = Number(p.dist || p.valor_dist || 0) * qtd;
+      stats.qtdTotal += qtd; stats.custoTotal += custo; stats.distTotal += dist;
+
+      if (!p.fornecedor) {
+        stats.categorias.semFornecedor.count++;
+        stats.categorias.semFornecedor.qtd += qtd;
+        stats.categorias.semFornecedor.custo += custo;
+        stats.categorias.semFornecedor.dist += dist;
+      }
+
+      if (qtd <= 0) {
+        stats.categorias.critico.count++; stats.categorias.critico.qtd += qtd;
+        stats.categorias.critico.custo += custo; stats.categorias.critico.dist += dist;
+      } else if (qtd <= min) {
+        stats.categorias.atencao.count++; stats.categorias.atencao.qtd += qtd;
+        stats.categorias.atencao.custo += custo; stats.categorias.atencao.dist += dist;
+      } else {
+        stats.categorias.normal.count++; stats.categorias.normal.qtd += qtd;
+        stats.categorias.normal.custo += custo; stats.categorias.normal.dist += dist;
+      }
+    });
+    return stats;
+  }
+
+  let chart;
+  function setupChart(ctx){
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Normal','Atenção','Crítico','Sem Fornecedor'],
+        datasets: [
+          { label: 'Qtd de Itens', data: [0,0,0,0] },
+          { label: 'Valor Total (Custo R$)', data: [0,0,0,0] }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: true } },
+        scales: {
+          x: { beginAtZero: true },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  function updateChart(stats){
+    if (!chart) return;
+    const c = stats.categorias;
+    chart.data.datasets[0].data = [c.normal.count, c.atencao.count, c.critico.count, c.semFornecedor.count];
+    chart.data.datasets[1].data = [c.normal.custo, c.atencao.custo, c.critico.custo, c.semFornecedor.custo];
+    chart.update();
+  }
+
+  function updateUI(stats){
+    const $ = sel => document.querySelector(sel);
+    $('#statProdutos') && ($('#statProdutos').textContent = stats.totalProdutos);
+    $('#statQtdTotal') && ($('#statQtdTotal').textContent = stats.qtdTotal);
+    $('#statCustoTotal') && ($('#statCustoTotal').textContent = currency(stats.custoTotal));
+    $('#statDistTotal') && ($('#statDistTotal').textContent = currency(stats.distTotal));
+
+    const list = document.getElementById('totaisPorCategoria');
+    if (list){
+      list.innerHTML = `
+        <li class="list-group-item d-flex justify-content-between"><span>Normal</span><span>${stats.categorias.normal.count} itens • R$ ${currency(stats.categorias.normal.custo)}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Atenção</span><span>${stats.categorias.atencao.count} itens • R$ ${currency(stats.categorias.atencao.custo)}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Crítico</span><span>${stats.categorias.critico.count} itens • R$ ${currency(stats.categorias.critico.custo)}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span>Sem Fornecedor</span><span>${stats.categorias.semFornecedor.count} itens • R$ ${currency(stats.categorias.semFornecedor.custo)}</span></li>
+      `;
+    }
+  }
+
+  function playBeepIfNeeded(stats){
+    const cfg = getCfg();
+    if (!cfg.sound) return;
+    if (stats.categorias.critico.count > 0){
+      const audio = new Audio(BEEP_SRC);
+      audio.play().catch(()=>{});
+    }
+  }
+
+  function applyCfgToFields(){
+    const cfg = getCfg();
+    const elMin = document.getElementById('cfgEstoqueMinimo');
+    const elSom = document.getElementById('cfgSom');
+    if (elMin) elMin.value = cfg.estoqueMinimo;
+    if (elSom) elSom.checked = !!cfg.sound;
+  }
+
+  function bindPanel(){
+    const btnSalvar = document.getElementById('btnSalvarCfg');
+    const btnAtualizar = document.getElementById('btnAtualizarCentral');
+    const btnQuick = document.getElementById('btnQuickPanel');
+
+    btnSalvar && btnSalvar.addEventListener('click', ()=>{
+      const cfg = getCfg();
+      const elMin = document.getElementById('cfgEstoqueMinimo');
+      const elSom = document.getElementById('cfgSom');
+      cfg.estoqueMinimo = Number(elMin && elMin.value) || 0;
+      cfg.sound = !!(elSom && elSom.checked);
+      saveCfg(cfg);
+      // Re-render Central se a função global existir
+      const refreshBtn = document.getElementById('btnRefreshNotifications');
+      if (refreshBtn) refreshBtn.click();
+    });
+
+    btnAtualizar && btnAtualizar.addEventListener('click', ()=>{
+      const refreshBtn = document.getElementById('btnRefreshNotifications');
+      if (refreshBtn) refreshBtn.click();
+    });
+
+    // Abrir painel pelo botão
+    btnQuick && btnQuick.addEventListener('click', ()=>{
+      const ocEl = document.getElementById('offcanvasCentral');
+      if (ocEl && window.bootstrap && bootstrap.Offcanvas){
+        new bootstrap.Offcanvas(ocEl).show();
+      }
+    });
+  }
+
+  function initOffcanvas(){
+    const ctx = document.getElementById('chartCentral');
+    if (ctx && !window.__centralChartSetup){
+      setupChart(ctx.getContext('2d'));
+      window.__centralChartSetup = true;
+    }
+    const stats = computeStats();
+    updateChart(stats);
+    updateUI(stats);
+    playBeepIfNeeded(stats);
+    applyCfgToFields();
+  }
+
+  // Auto abrir painel quando entrar na aba central-acoes
+  const __prevShowTab = window.showTab || function(id){
+    document.querySelectorAll('.tab-page').forEach(e=>e.classList.add('d-none'));
+    const el = document.getElementById(id); if (el) el.classList.remove('d-none');
+  };
+  window.showTab = function(id, data){
+    __prevShowTab(id, data);
+    if (id === 'central-acoes'){
+      bindPanel();
+      setTimeout(()=>{
+        initOffcanvas();
+        const ocEl = document.getElementById('offcanvasCentral');
+        const cfg = getCfg();
+        if (ocEl && cfg.autoOpen && window.bootstrap && bootstrap.Offcanvas){
+          new bootstrap.Offcanvas(ocEl).show();
+        }
+      }, 150);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    bindPanel();
+    // Se a central já estiver visível no carregamento, inicializa
+    const central = document.getElementById('central-acoes');
+    if (central && !central.classList.contains('d-none')){
+      initOffcanvas();
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
+<script>
+// ===== Central de Ações e Controle de Estoque (v27.19) =====
+(function(){
+  const CENTRAL_CFG_KEY = 'central_config_v19';
+
+  function getCentralConfig() {
+    try { return JSON.parse(localStorage.getItem(CENTRAL_CFG_KEY)) || { estoqueMinimo: 5, prioridade: 'media', som: false }; }
+    catch(e){ return { estoqueMinimo: 5, prioridade: 'media', som: false }; }
+  }
+  function saveCentralConfig(cfg) { localStorage.setItem(CENTRAL_CFG_KEY, JSON.stringify(cfg)); }
+
+  function getProdutos(){
+    try {
+      const list = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || [];
+      return Array.isArray(list) ? list : [];
+    } catch(e){ return []; }
+  }
+
+  function makeAlert(tipo, msg, prod){ return { tipo: tipo, msg: msg, prod: prod || {} }; }
+
+  function renderNotificationCenter(filter = 'all') {
+    const produtos = getProdutos();
+    const cfg = getCentralConfig();
+    const container = document.getElementById('notificationCenterContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const alerts = [];
+    produtos.forEach(p => {
+      const estoque = Number(p.estoque_calculado || p.qtd || p.estoque || 0);
+      const min = Number(p.estoqueMinimo || cfg.estoqueMinimo || 0);
+      const custo = Number(p.custo || p.valor_custo || 0);
+      const dist  = Number(p.dist || p.valor_dist || 0);
+
+      if (estoque <= 0) alerts.push(makeAlert('critico', `${p.nome||p.codigo||'Produto'} sem estoque!`, p));
+      else if (estoque <= min) alerts.push(makeAlert('atencao', `${p.nome||p.codigo||'Produto'} abaixo do mínimo (${estoque}/${min})`, p));
+
+      if (!p.fornecedor) alerts.push(makeAlert('info', `${p.nome||p.codigo||'Produto'} sem fornecedor definido.`, p));
+      if (custo > dist) alerts.push(makeAlert('atencao', `${p.nome||p.codigo||'Produto'} com custo maior que a distribuição.`, p));
+    });
+
+    const filtered = (filter === 'all') ? alerts : alerts.filter(a => a.tipo === filter);
+    if (!filtered.length) {
+      container.innerHTML = '<div class="text-center text-muted py-4">Nenhuma notificação encontrada.</div>';
+      const badge = document.getElementById('notificationBadge');
+      if (badge) badge.classList.add('d-none');
+      return;
+    }
+
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+      badge.textContent = String(filtered.length);
+      badge.classList.remove('d-none');
+    }
+
+    filtered.forEach(a => {
+      const color = a.tipo === 'critico' ? 'danger' : a.tipo === 'atencao' ? 'warning' : 'info';
+      const icon  = a.tipo === 'critico' ? 'bi-exclamation-octagon' : a.tipo === 'atencao' ? 'bi-exclamation-triangle' : 'bi-info-circle';
+
+      const card = document.createElement('div');
+      card.className = 'col-12 col-md-6 col-lg-4';
+      card.innerHTML = `
+        <div class="card shadow-lg border-${color} border-2 h-100">
+          <div class="card-header bg-${color} text-white d-flex align-items-center justify-content-between">
+            <span><i class="bi ${icon} me-2"></i>${a.tipo.toUpperCase()}</span>
+            <span class="badge bg-light text-dark">${a.prod.fornecedor || 'Sem Fornecedor'}</span>
+          </div>
+          <div class="card-body bg-light">
+            <h6 class="fw-bold text-${color}">${a.msg}</h6>
+            <hr class="my-2">
+            <p class="small mb-2">
+              <b>Produto:</b> ${a.prod.nome || a.prod.codigo || '—'}<br>
+              <b>Estoque atual:</b> ${a.prod.estoque_calculado || a.prod.qtd || a.prod.estoque || 0}<br>
+              <b>Estoque mínimo:</b> ${a.prod.estoqueMinimo || cfg.estoqueMinimo}<br>
+              <b>Custo:</b> R$ ${(a.prod.custo || a.prod.valor_custo || 0).toFixed(2)}<br>
+              <b>Distribuição:</b> R$ ${(a.prod.dist || a.prod.valor_dist || 0).toFixed(2)}
+            </p>
+          </div>
+          <div class="card-footer d-flex justify-content-between">
+            <button class="btn btn-sm btn-outline-primary" data-action="goToTabAndFocus" data-extra="produtos" data-id="${a.prod.codigo || ''}"><i class="bi bi-box-seam me-1"></i>Abrir</button>
+            <button class="btn btn-sm btn-outline-info" data-action="report"><i class="bi bi-file-earmark-text me-1"></i>Relatório</button>
+            <button class="btn btn-sm btn-outline-success" data-action="dismiss"><i class="bi bi-check-circle me-1"></i>Resolver</button>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function openCentralConfig() {
+    const cfg = getCentralConfig();
+    const novoMin = prompt('Defina a quantidade mínima de estoque global:', cfg.estoqueMinimo);
+    if (novoMin !== null) {
+      cfg.estoqueMinimo = Number(novoMin) || 0;
+      saveCentralConfig(cfg);
+      alert('Configuração salva!');
+      renderNotificationCenter();
+    }
+  }
+
+  function gerarRelatorioRapido(produto){
+    const doc = new window.jspdf.jsPDF();
+    doc.setFontSize(14);
+    doc.text('Relatório Rápido do Produto', 20, 20);
+    doc.setFontSize(10);
+    doc.text(`Nome: ${produto.nome || produto.codigo}`, 20, 40);
+    doc.text(`Fornecedor: ${produto.fornecedor || '—'}`, 20, 55);
+    doc.text(`Estoque atual: ${produto.estoque_calculado || produto.qtd || 0}`, 20, 70);
+    doc.text(`Custo: R$ ${(produto.custo || produto.valor_custo || 0).toFixed(2)}`, 20, 85);
+    doc.text(`Distribuição: R$ ${(produto.dist || produto.valor_dist || 0).toFixed(2)}`, 20, 100);
+    doc.save(`Relatorio_${(produto.nome||'produto').replace(/\s+/g,'_')}.pdf`);
+  }
+
+  function bindCentralActions(){
+    const btnRefresh = document.getElementById('btnRefreshNotifications');
+    const btnDismiss = document.getElementById('btnDismissAllNotifications');
+    const btnConfig  = document.getElementById('btnConfigCentral');
+    const filters = document.querySelectorAll('#filterButtons button');
+    const container = document.getElementById('notificationCenterContainer');
+
+    if (btnRefresh) btnRefresh.addEventListener('click', () => renderNotificationCenter());
+    if (btnDismiss) btnDismiss.addEventListener('click', () => {
+      const cont = document.getElementById('notificationCenterContainer');
+      if (cont) cont.innerHTML = '<div class="text-center text-muted py-4">Nenhuma notificação encontrada.</div>';
+      const badge = document.getElementById('notificationBadge');
+      if (badge) badge.classList.add('d-none');
+    });
+    if (btnConfig) btnConfig.addEventListener('click', openCentralConfig);
+
+    filters.forEach(b => b.addEventListener('click', e => {
+      filters.forEach(f => f.classList.remove('active'));
+      e.target.classList.add('active');
+      renderNotificationCenter(e.target.dataset.filter);
+    }));
+
+    if (container) {
+      container.addEventListener('click', function(e){
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const card = btn.closest('.card');
+        const nome = card.querySelector('h6')?.innerText || '';
+        const produto = { nome: nome };
+        switch(action){
+          case 'dismiss':
+            card.classList.add('animate__animated', 'animate__fadeOut');
+            setTimeout(()=> card.remove(), 500);
+            break;
+          case 'goToTabAndFocus':
+            if (window.menu && window.showTab) {
+              document.querySelectorAll('#menu .nav-link').forEach(n=>n.classList.remove('active'));
+              const link = document.querySelector('#menu .nav-link[data-tab="produtos"]');
+              if (link){ link.classList.add('active'); }
+              window.showTab('produtos', { codigo: btn.getAttribute('data-id') });
+            }
+            break;
+          case 'report':
+            const prod = getProdutos().find(p => p.codigo === btn.getAttribute('data-id'));
+            if (prod) gerarRelatorioRapido(prod);
+            break;
+        }
+      });
+    }
+  }
+
+  const __prevShowTab = window.showTab || function(id){
+    document.querySelectorAll('.tab-page').forEach(e=>e.classList.add('d-none'));
+    const el = document.getElementById(id); if (el) el.classList.remove('d-none');
+  };
+
+  window.showTab = function(id, focusData){
+    __prevShowTab(id, focusData);
+    if (id === 'central-acoes') {
+      bindCentralActions();
+      renderNotificationCenter();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    bindCentralActions();
+    renderNotificationCenter();
+  });
+})();
+</script>

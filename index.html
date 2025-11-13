@@ -255,6 +255,29 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* Visual enhancement for Relatório por Fornecedor */
+#relFornecedorGrid .card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+#relFornecedorGrid .card-header {
+  background: linear-gradient(90deg, #e9f2ff, #ffffff);
+  border-bottom: 1px solid #d0d7e5;
+}
+#relFornecedorGrid table {
+  font-size: 0.9rem;
+}
+#relFornecedorGrid table thead {
+  background: #0d6efd;
+  color: white;
+}
+#relFornecedorGrid table tbody tr:hover {
+  background: #f1f7ff;
+}
+</style>
+
 </head>
 <body class="collapsed-right">
 <div id="left-sidebar-trigger"></div>
@@ -5022,78 +5045,292 @@ function btoaUtf8(str) {
 })();
 </script>
 
+
 <script>
-/* ======== RELATÓRIO FORNECEDOR (PDF POR FORNECEDOR - FINAL LIMPO) ======== */
-(function(){
-  function getGrupos() {
-    const produtos = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || [];
-    const grupos = {};
-    for (const p of produtos) {
-      const f = (p.fornecedor || 'Sem Fornecedor').trim();
-      const e = Number(p.estoque_calculado || p.estoque || 0);
-      const c = Number(p.custo || 0);
-      const d = Number(p.dist || 0);
-      if (!grupos[f]) grupos[f] = { fornecedor: f, itens: [], total_qtd: 0, total_custo: 0, total_dist: 0 };
-      grupos[f].itens.push({
-        codigo: p.codigo || '', nome: p.nome || '',
-        estoque: e, custo: c, dist: d,
-        totalCusto: e * c, totalDist: e * d
-      });
-      grupos[f].total_qtd += e;
-      grupos[f].total_custo += e * c;
-      grupos[f].total_dist += e * d;
+(function() {
+    'use strict';
+
+    // 1. Chaves de armazenamento (iguais às do sistema)
+    const KEY_PRODUCTS = 'estoque_produtos_v13';
+    const KEY_MOVES = 'estoque_movimentos_v13';
+
+    // 2. Função de carregamento segura
+    function load(key) {
+        try {
+            return JSON.parse(localStorage.getItem(key)) || [];
+        } catch (e) {
+            console.error('Erro ao carregar ' + key, e);
+            return [];
+        }
     }
-    return Object.values(grupos);
-  }
 
-  async function exportarPDF() {
-    if (!window.jspdf || !window.jspdf.jsPDF) return alert('jsPDF não carregado.');
-    const { jsPDF } = window.jspdf;
-    const grupos = getGrupos();
-    if (!grupos.length) return alert('Nenhum fornecedor encontrado.');
+    /**
+     * 3. REPLICAÇÃO DA LÓGICA CENTRAL DO SISTEMA
+     * Esta é a "fonte da verdade" para o estoque, copiada da sua função
+     * principal (linha ~1548) para garantir consistência.
+     */
+    function calculaEstoqueProduto(codigo) {
+        // Carrega os dados necessários
+        const produtos = load(KEY_PRODUCTS);
+        const movimentos = load(KEY_MOVES);
 
-    alert(`Gerando ${grupos.length} PDFs...`);
-    for (const g of grupos) {
-      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const margem = 32; let y = margem;
-      doc.setFontSize(14);
-      doc.text('Relatório de Produtos por Fornecedor', margem, y); y += 18;
-      const agora = new Date();
-      doc.setFontSize(10);
-      doc.text(`Gerado em: ${agora.toLocaleDateString()} ${agora.toLocaleTimeString()}`, margem, y); y += 12;
-      doc.setFontSize(12);
-      doc.text(`Fornecedor: ${g.fornecedor}`, margem, y); y += 10;
-      if (typeof doc.autoTable === 'function') {
-        doc.autoTable({
-          startY: y,
-          head: [['Código','Produto','Estoque','Custo','Dist','Tot Custo','Tot Dist']],
-          body: g.itens.map(it => [
-            it.codigo, it.nome, String(it.estoque),
-            it.custo.toFixed(2), it.dist.toFixed(2),
-            it.totalCusto.toFixed(2), it.totalDist.toFixed(2)
-          ]),
-          margin: { left: margem, right: margem },
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [13, 110, 253] }
+        const p = produtos.find(function(x) { return x.codigo === codigo; });
+        if (!p) return 0;
+
+        let estoque = Number(p.estoque_inicial || 0);
+
+        movimentos.forEach(function(m) {
+            if (m.produto === codigo) {
+                if (m.tipo === 'entrada') estoque += Number(m.quantidade || m.qtd || 0);
+                else if (m.tipo === 'saida') estoque -= Number(m.quantidade || m.qtd || 0);
+            }
         });
-      }
-      const safe = g.fornecedor.replace(/[^a-z0-9]/gi, '_');
-      doc.save(`Fornecedor_${safe}.pdf`);
-      await new Promise(r => setTimeout(r, 200));
+        return estoque;
     }
-    alert('Exportação concluída!');
-  }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('btnExportPdfFornecedor');
-    if (btn) {
-      const clone = btn.cloneNode(true);
-      btn.parentNode.replaceChild(clone, btn);
-      clone.addEventListener('click', exportarPDF);
+    /**
+     * 4. NOVA FUNÇÃO DE COLETA DE DADOS (CORRIGIDA)
+     * Esta função agora usa a lógica correta.
+     */
+    function getDadosCorretosFornecedor() {
+        const produtos = load(KEY_PRODUCTS);
+        const grupos = {};
+        const totaisGerais = { qtd: 0, custo: 0, dist: 0 };
+
+        produtos.forEach(function(p) {
+            const fornecedor = (p.fornecedor || "Não informado").trim();
+            if (!grupos[fornecedor]) {
+                grupos[fornecedor] = {
+                    nome: fornecedor,
+                    itens: [],
+                    total_qtd: 0,
+                    total_custo: 0,
+                    total_dist: 0
+                };
+            }
+
+            // A MUDANÇA CRÍTICA:
+            // Substitui p.estoque_calculado pela chamada de função ao vivo
+            const estoqueAtual = calculaEstoqueProduto(p.codigo); 
+
+            const custo = Number(p.custo || p.valor_custo || 0);
+            const dist = Number(p.dist || p.valor_dist || 0);
+            const totalCustoItem = estoqueAtual * custo;
+            const totalDistItem = estoqueAtual * dist;
+
+            // Adiciona item ao grupo
+            grupos[fornecedor].itens.push({
+                codigo: p.codigo,
+                nome: p.nome,
+                categoria: p.categoria || "-",
+                estoque: estoqueAtual,
+                custo: custo,
+                dist: dist,
+                totalCusto: totalCustoItem,
+                totalDist: totalDistItem
+            });
+
+            // Soma totais do grupo
+            grupos[fornecedor].total_qtd += estoqueAtual;
+            grupos[fornecedor].total_custo += totalCustoItem;
+            grupos[fornecedor].total_dist += totalDistItem;
+
+            // Soma totais gerais
+            totaisGerais.qtd += estoqueAtual;
+            totaisGerais.custo += totalCustoItem;
+            totaisGerais.dist += totalDistItem;
+        });
+
+        // Converte objeto em array e ordena
+        const listaGrupos = Object.keys(grupos).map(function(key) {
+            return grupos[key];
+        }).sort(function(a, b) {
+            return a.nome.localeCompare(b.nome);
+        });
+
+        return { grupos: listaGrupos, totaisGerais: totaisGerais };
     }
-  });
+
+    /**
+     * 5. RENDERIZAÇÃO DO RELATÓRIO NA TELA (CORRIGIDO)
+     * Esta função agora constrói o HTML usando os dados corretos.
+     */
+    function renderRelatorioFornecedor() {
+        const container = document.getElementById('relFornecedorGrid');
+        if (!container) return;
+
+        const dados = getDadosCorretosFornecedor();
+        let html = "";
+
+        if (dados.grupos.length === 0) {
+            container.innerHTML = "<p class='text-muted'>Nenhum produto encontrado.</p>";
+            return;
+        }
+
+        dados.grupos.forEach(function(g) {
+            html += '<div class="card mb-3">';
+            // Cabeçalho do Card
+            html += '<div class="card-header bg-light d-flex justify-content-between flex-wrap">';
+            html +=   '<h5 class="mb-0 text-primary">' + g.nome + '</h5>';
+            html +=   '<div class="text-muted small">';
+            html +=     '<strong>Qtd:</strong> ' + g.total_qtd + ' | ';
+            html +=     '<strong>Custo:</strong> R$ ' + g.total_custo.toFixed(2) + ' | ';
+            html +=     '<strong>Dist:</strong> R$ ' + g.total_dist.toFixed(2);
+            html +=   '</div>';
+            html += '</div>';
+
+            // Corpo (Tabela)
+            html += '<div class="card-body p-0"><div class="table-responsive">';
+            html += '<table class="table table-sm table-striped table-hover mb-0">';
+            html += '<thead><tr>' +
+                    '<th>Código</th>' +
+                    '<th>Produto</th>' +
+                    '<th>Categoria</th>' +
+                    '<th>Estoque</th>' +
+                    '<th>Custo (R$)</th>' +
+                    '<th>Dist. (R$)</th>' +
+                    '<th>Total Custo</th>' +
+                    '<th>Total Dist.</th>' +
+                    '</tr></thead><tbody>';
+
+            g.itens.forEach(function(it) {
+                html += '<tr>' +
+                        '<td>' + (it.codigo||'') + '</td>' +
+                        '<td>' + (it.nome||'') + '</td>' +
+                        '<td>' + (it.categoria||'-') + '</td>' +
+                        '<td>' + (it.estoque||0) + '</td>' +
+                        '<td>' + (it.custo||0).toFixed(2) + '</td>' +
+                        '<td>' + (it.dist||0).toFixed(2) + '</td>' +
+                        '<td>' + (it.totalCusto||0).toFixed(2) + '</td>' +
+                        '<td>' + (it.totalDist||0).toFixed(2) + '</td>' +
+                        '</tr>';
+            });
+
+            html += '</tbody></table></div></div>'; // Fim do card-body e table-responsive
+            html += '</div>'; // Fim do card
+        });
+
+        // Card de Total Geral
+        html += '<div class="card border-primary mt-4">';
+        html += '<div class="card-header bg-primary text-white">';
+        html +=   '<h5 class="mb-0">Total Geral (Todos os Fornecedores)</h5>';
+        html += '</div>';
+        html += '<div class="card-body fs-5">';
+        html +=   '<div><strong>Quantidade Total:</strong> ' + dados.totaisGerais.qtd + '</div>';
+        html +=   '<div><strong>Valor Total (Custo):</strong> R$ ' + dados.totaisGerais.custo.toFixed(2) + '</div>';
+        html +=   '<div><strong>Valor Total (Distribuição):</strong> R$ ' + dados.totaisGerais.dist.toFixed(2) + '</div>';
+        html += '</div></div>';
+
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * 6. EXPORTAÇÃO DE PDF (CORRIGIDA)
+     * Esta função substitui a exportação PDF existente.
+     */
+    function exportarPDFFornecedor() {
+        if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.prototype.autoTable) {
+            alert('Erro: Bibliotecas jsPDF ou jsPDF-AutoTable não carregadas.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const dados = getDadosCorretosFornecedor();
+        const agora = new Date();
+        const dataFormatada = agora.toLocaleDateString() + ' ' + agora.toLocaleTimeString();
+
+        if (dados.grupos.length === 0) {
+            alert('Nenhum dado para exportar.');
+            return;
+        }
+
+        alert('Gerando ' + dados.grupos.length + ' arquivo(s) PDF...');
+
+        dados.grupos.forEach(function(g) {
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const margem = 32;
+            let y = margem;
+
+            doc.setFontSize(14);
+            doc.text('Relatório de Produtos por Fornecedor', margem, y); y += 18;
+            doc.setFontSize(10);
+            doc.text('Gerado em: ' + dataFormatada, margem, y); y += 16;
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Fornecedor: ' + g.nome, margem, y); y += 20;
+
+            const head = [['Código', 'Produto', 'Cat.', 'Estoque', 'Custo', 'Dist.', 'Total Custo', 'Total Dist.']];
+            const body = g.itens.map(function(it) {
+                return [
+                    it.codigo, it.nome, it.categoria, it.estoque,
+                    it.custo.toFixed(2), it.dist.toFixed(2),
+                    it.totalCusto.toFixed(2), it.totalDist.toFixed(2)
+                ];
+            });
+
+            doc.autoTable({
+                startY: y,
+                head: head,
+                body: body,
+                foot: [
+                    [
+                        { content: 'TOTAIS', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                        { content: String(g.total_qtd), styles: { fontStyle: 'bold' } },
+                        '', '', // Custo e Dist unitários
+                        { content: 'R$ ' + g.total_custo.toFixed(2), styles: { fontStyle: 'bold' } },
+                        { content: 'R$ ' + g.total_dist.toFixed(2), styles: { fontStyle: 'bold' } }
+                    ]
+                ],
+                margin: { left: margem, right: margem },
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [13, 110, 253] },
+                footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' }
+            });
+
+            // Nome do arquivo
+            const safeName = (g.nome || 'fornecedor').replace(/[^a-z0-9]/gi, '_');
+            doc.save('Fornecedor_' + safeName + '.pdf');
+        });
+    }
+
+    /**
+     * 7. HOOKS DE INICIALIZAÇÃO
+     * Substitui os listeners dos botões e da navegação.
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hook para o botão de PDF
+        const btnPdf = document.getElementById('btnExportPdfFornecedor');
+        if (btnPdf) {
+            // Clona o botão para remover listeners antigos e aplicar o novo
+            const btnPdfClone = btnPdf.cloneNode(true);
+            btnPdf.parentNode.replaceChild(btnPdfClone, btnPdf);
+            btnPdfClone.addEventListener('click', exportarPDFFornecedor);
+        }
+
+        // Hook para a navegação de abas (para atualizar ao clicar)
+        const menu = document.getElementById('menu');
+        if (menu) {
+            menu.addEventListener('click', function(ev) {
+                const a = ev.target.closest('[data-tab]');
+                if (a && a.dataset.tab === 'relatorio-fornecedor') {
+                    // Espera a aba trocar antes de renderizar
+                    setTimeout(renderRelatorioFornecedor, 50);
+                }
+            });
+        }
+
+        // Se o relatório já estiver visível, renderiza
+        const relPage = document.getElementById('relatorio-fornecedor');
+        if (relPage && !relPage.classList.contains('d-none')) {
+            renderRelatorioFornecedor();
+        }
+    });
+
 })();
 </script>
+
 
 
 <script>

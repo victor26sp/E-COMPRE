@@ -1273,7 +1273,7 @@
         return;
       }
       navigator.clipboard.writeText(ncmValor).then(() => {
-        (window.showToast || alert)(\`NCM "\${ncmValor}" copiado!\`, 'success');
+        (window.showToast || alert)('NCM "' + ncmValor + '" copiado!', 'success');
       }).catch(err => {
         console.error('Falha ao copiar:', err);
         (window.showToast || alert)('Falha ao copiar.', 'danger');
@@ -4782,25 +4782,74 @@ function btoaUtf8(str) {
   }
 
   function getDadosRelatorioFornecedor(){
+    // Calcula os saldos por fornecedor usando estoque inicial + entradas - saídas
     const produtos = safeLoad(KEY_PRODUCTS);
-    if(!produtos.length)return {grupos:[],geral:{}};
-    const map={}, geral={qtd:0,custo:0,dist:0};
-    produtos.forEach(p=>{
-      const f=(p.fornecedor||'— Sem fornecedor —').trim();
-      const est=Number(p.estoque_calculado||0);
-      const custo=Number(p.custo||0);
-      const dist=Number(p.dist||0);
-      if(!map[f])map[f]={fornecedor:f,itens:[],total_qtd:0,total_custo:0,total_dist:0};
-      map[f].itens.push({
-        codigo:p.codigo||'',nome:p.nome||'',estoque:est,custo,dist,
-        totalCusto:est*custo,totalDist:est*dist
+    const movimentos = safeLoad(KEY_MOVES);
+    if (!Array.isArray(produtos) || produtos.length === 0) {
+      return { grupos: [], geral: {} };
+    }
+    const map = {};
+    const geral = { qtd: 0, custo: 0, dist: 0 };
+
+    produtos.forEach(p => {
+      const fornecedor = (p.fornecedor || '— Sem fornecedor —').trim();
+      // Estoque inicial do produto (aceita tanto estoque_inicial quanto estoque)
+      let estoque = Number(p.estoque_inicial ?? p.estoque ?? 0);
+
+      // Soma os movimentos ligados a este produto
+      movimentos.forEach(m => {
+        const codigoMov = m.codigo || m.produto;
+        if (!codigoMov) return;
+        if (codigoMov !== (p.codigo || p.pCodigo)) return;
+
+        const tipo = (m.tipo || '').toLowerCase();
+        const qtd = Number(m.quantidade || 0);
+        if (!qtd || isNaN(qtd)) return;
+
+        if (tipo === 'entrada') {
+          estoque += qtd;
+        } else if (tipo === 'saida') {
+          estoque -= qtd;
+        }
       });
-      map[f].total_qtd+=est;
-      map[f].total_custo+=est*custo;
-      map[f].total_dist+=est*dist;
-      geral.qtd+=est; geral.custo+=est*custo; geral.dist+=est*dist;
+
+      const est = estoque;
+      const custo = Number(p.custo || 0);
+      const dist = Number(p.dist || 0);
+
+      if (!map[fornecedor]) {
+        map[fornecedor] = {
+          fornecedor,
+          itens: [],
+          total_qtd: 0,
+          total_custo: 0,
+          total_dist: 0
+        };
+      }
+
+      map[fornecedor].itens.push({
+        codigo: p.codigo || '',
+        nome: p.nome || '',
+        estoque: est,
+        custo,
+        dist,
+        totalCusto: est * custo,
+        totalDist: est * dist
+      });
+
+      map[fornecedor].total_qtd += est;
+      map[fornecedor].total_custo += est * custo;
+      map[fornecedor].total_dist += est * dist;
+
+      geral.qtd += est;
+      geral.custo += est * custo;
+      geral.dist += est * dist;
     });
-    return {grupos:Object.values(map).sort((a,b)=>a.fornecedor.localeCompare(b.fornecedor)),geral};
+
+    return {
+      grupos: Object.values(map).sort((a, b) => a.fornecedor.localeCompare(b.fornecedor)),
+      geral
+    };
   }
 
   function gerarRelatorioPorFornecedor(){
@@ -4835,44 +4884,6 @@ function btoaUtf8(str) {
     });
   }
 
-  = window.jspdf || {};
-      if(!jsPDF){ showToast('Biblioteca jsPDF não carregada.','danger'); return; }
-      if(typeof jsPDF.prototype.autoTable==='undefined'){
-        showToast('Plugin jsPDF-AutoTable não carregado.','danger'); return;
-      }
-      const dados=getDadosRelatorioFornecedor();
-      if(!dados.grupos.length){ showToast('Nenhum fornecedor encontrado.','warning'); return; }
-      showToast(`Exportando ${dados.grupos.length} PDFs...`,'info');
-      const margem=32;
-      const hoje=new Date();
-      for(const g of dados.grupos){
-        const doc=new jsPDF({orientation:'p',unit:'pt',format:'a4'});
-        let y=margem;
-        doc.setFontSize(14);
-        doc.text('Relatório de Produtos por Fornecedor',margem,y); y+=18;
-        doc.setFontSize(10);
-        doc.text(`Gerado em: ${hoje.toLocaleDateString()} ${hoje.toLocaleTimeString()}`,margem,y); y+=12;
-        doc.setFontSize(12);
-        doc.text(`Fornecedor: ${g.fornecedor}`,margem,y); y+=10;
-        doc.autoTable({
-          startY:y,
-          head:[['Código','Produto','Estoque','Custo','Dist','Tot Custo','Tot Dist']],
-          body:g.itens.map(it=>[
-            it.codigo,it.nome,it.estoque,
-            it.custo.toFixed(2),it.dist.toFixed(2),
-            it.totalCusto.toFixed(2),it.totalDist.toFixed(2)
-          ]),
-          margin:{left:margem,right:margem},
-          styles:{fontSize:8},
-          headStyles:{fillColor:[13,110,253]}
-        });
-        const safeName=g.fornecedor.replace(/[^a-z0-9]/gi,'_');
-        doc.save(`Relatorio_Fornecedor_${safeName}.pdf`);
-        await new Promise(r=>setTimeout(r,300));
-      }
-      showToast('Exportação concluída.','success');
-    }catch(e){ console.error(e); showToast('Erro ao exportar PDF.','danger'); }
-  }
 
   function hookTabNavigation(){
     const menu=document.getElementById('menu');
@@ -4887,13 +4898,13 @@ function btoaUtf8(str) {
   }
 
   function hookFornecedorPdfButton(){
-    const btn=document.getElementById('btnExportPdfFornecedor');
-    if(btn){
-      const c=btn.cloneNode(true);
-      btn.parentNode.replaceChild(c,btn);
-      c.addEventListener('click',exportRelatorioFornecedorPDF_MultiplosArquivos);
-    }
-  }
+  function hookFornecedorPdfButton(){
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
+    // integração antiga substituída pelo novo módulo de PDF por fornecedor
 
   function setupDailyBackupReminder(){
     const key='last_backup_reminder_date';
@@ -4908,7 +4919,7 @@ function btoaUtf8(str) {
   rebuildCalculatedStock();
   hookTabNavigation();
   hookFornecedorPdfButton();
-  setupDailyBackupReminder();
+  // hookFornecedorPdfButton(); // desativado, PDF é tratado em módulo separado
   console.log('[PATCH v27.1] Correções aplicadas (Relatório Fornecedor).');
 })();
 </script>
@@ -5026,25 +5037,83 @@ function btoaUtf8(str) {
 /* ======== RELATÓRIO FORNECEDOR (PDF POR FORNECEDOR - FINAL LIMPO) ======== */
 (function(){
   function getGrupos() {
-    const produtos = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || [];
-    const grupos = {};
-    for (const p of produtos) {
-      const f = (p.fornecedor || 'Sem Fornecedor').trim();
-      const e = Number(p.estoque_calculado || p.estoque || 0);
-      const c = Number(p.custo || 0);
-      const d = Number(p.dist || 0);
-      if (!grupos[f]) grupos[f] = { fornecedor: f, itens: [], total_qtd: 0, total_custo: 0, total_dist: 0 };
-      grupos[f].itens.push({
-        codigo: p.codigo || '', nome: p.nome || '',
-        estoque: e, custo: c, dist: d,
-        totalCusto: e * c, totalDist: e * d
+    // Calcula os grupos de fornecedores com base no estoque atual (estoque inicial + entradas - saídas)
+    var produtos = [];
+    var movimentos = [];
+    try { produtos = JSON.parse(localStorage.getItem('estoque_produtos_v13') || '[]'); } catch(e){ produtos = []; }
+    try { movimentos = JSON.parse(localStorage.getItem('estoque_movimentos_v13') || '[]'); } catch(e){ movimentos = []; }
+    if (!produtos.length) return [];
+    var map = {};
+    for (var i = 0; i < produtos.length; i++) {
+      var p = produtos[i];
+      var fornecedor = ((p.fornecedor || '— Sem fornecedor —') + '').trim();
+      var estoqueInicial = (p.estoque_inicial != null ? p.estoque_inicial : (p.estoque != null ? p.estoque : 0));
+      var estoque = Number(estoqueInicial || 0);
+
+      for (var j = 0; j < movimentos.length; j++) {
+        var m = movimentos[j];
+        var codigoMov = m.codigo || m.produto;
+        if (!codigoMov) continue;
+        if (codigoMov !== (p.codigo || p.pCodigo)) continue;
+
+        var tipo = String(m.tipo || '').toLowerCase();
+        var qtd = Number(m.quantidade || 0);
+        if (!qtd || isNaN(qtd)) continue;
+
+        if (tipo === 'entrada') estoque += qtd;
+        else if (tipo === 'saida') estoque -= qtd;
+      }
+
+      var est = estoque;
+      var custo = Number(p.custo || 0);
+      var dist = Number(p.dist || 0);
+
+      if (!map[fornecedor]) {
+        map[fornecedor] = { fornecedor: fornecedor, itens: [], total_qtd: 0, total_custo: 0, total_dist: 0 };
+      }
+      map[fornecedor].itens.push({
+        codigo: p.codigo || '',
+        nome: p.nome || '',
+        estoque: est,
+        custo: custo,
+        dist: dist,
+        totalCusto: est * custo,
+        totalDist: est * dist
       });
-      grupos[f].total_qtd += e;
-      grupos[f].total_custo += e * c;
-      grupos[f].total_dist += e * d;
+      map[fornecedor].total_qtd += est;
+      map[fornecedor].total_custo += est * custo;
+      map[fornecedor].total_dist += est * dist;
     }
-    return Object.values(grupos);
+    var grupos = [];
+    for (var k in map) {
+      if (map.hasOwnProperty(k)) grupos.push(map[k]);
+    }
+    grupos.sort(function(a, b){ return a.fornecedor.localeCompare(b.fornecedor); });
+    return grupos;
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   async function exportarPDF() {
     if (!window.jspdf || !window.jspdf.jsPDF) return alert('jsPDF não carregado.');
@@ -5237,133 +5306,133 @@ function btoaUtf8(str) {
 </script>
 
 <script>
-/* ======== RELATÓRIO FORNECEDOR (PDF por fornecedor, ES5) ======== */
-(function(){
-  function getGrupos(){
-    var produtos = [];
-    try { produtos = JSON.parse(localStorage.getItem('estoque_produtos_v13')) || []; } catch(e){}
-    var grupos = {};
-    var totalGeralQtd = 0, totalGeralCusto = 0, totalGeralDist = 0;
 
-    for (var i=0;i<produtos.length;i++){
-      var p = produtos[i];
-      var f = ((p.fornecedor||'Sem Fornecedor')+'').trim();
-      var e = Number(p.estoque_calculado || p.estoque || 0);
-      var c = Number(p.custo || 0);
-      var d = Number(p.dist || 0);
-      if (!grupos[f]) grupos[f] = { fornecedor:f, itens:[], total_qtd:0, total_custo:0, total_dist:0 };
-      grupos[f].itens.push({
-        codigo: p.codigo||'', nome: p.nome||'',
-        estoque: e, custo: c, dist: d,
-        totalCusto: e*c, totalDist: e*d
-      });
-      grupos[f].total_qtd += e;
-      grupos[f].total_custo += e*c;
-      grupos[f].total_dist += e*d;
 
-      totalGeralQtd += e;
-      totalGeralCusto += e*c;
-      totalGeralDist += e*d;
-    }
 
-    var out = [];
-    for (var k in grupos){ if (grupos.hasOwnProperty(k)) out.push(grupos[k]); }
 
-    // Anexa totais gerais
-    out.totalGeral = { qtd: totalGeralQtd, custo: totalGeralCusto, dist: totalGeralDist };
-    return out;
-  }
 
-  function exportarPDF(){
-    if (!window.jspdf || !window.jspdf.jsPDF){ alert('jsPDF não carregado.'); return; }
-    var jsPDF = window.jspdf.jsPDF;
-    var grupos = getGrupos();
-    if (!grupos.length){ alert('Nenhum fornecedor encontrado.'); return; }
-    alert('Gerando ' + grupos.length + ' PDFs...');
-    var margem = 32;
-    var i = 0;
 
-    function prox(){
-      if (i >= grupos.length){ alert('Exportação concluída!'); return; }
-      var g = grupos[i++];
-      var doc = new jsPDF({orientation:'p', unit:'pt', format:'a4'});
-      var y = margem;
-      var agora = new Date();
 
-      // Cabeçalho principal
-      doc.setFontSize(14);
-      doc.text('Relatório de Produtos por Fornecedor', margem, y); 
-      y += 18;
-      doc.setFontSize(10);
-      doc.text('Gerado em: ' + agora.toLocaleDateString() + ' ' + agora.toLocaleTimeString(), margem, y);
-      y += 12;
 
-      // Bloco de resumo no topo
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margem - 5, y - 10, 550, 60, 'F');
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'bold');
-      doc.text('Resumo do Fornecedor: ' + (g.fornecedor || '—'), margem, y + 2);
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(10);
-      y += 16;
-      doc.text('Quantidade Total: ' + g.total_qtd, margem, y);
-      y += 14;
-      doc.text('Valor Total (Custo): R$ ' + g.total_custo.toFixed(2), margem, y);
-      y += 14;
-      doc.text('Valor Total (Distribuição): R$ ' + g.total_dist.toFixed(2), margem, y);
-      y += 24;
 
-      // Corpo da tabela
-      if (typeof doc.autoTable === 'function'){
-        var head = [['Código','Produto','Estoque','Custo','Dist','Tot Custo','Tot Dist']];
-        var body = [];
-        for (var j=0;j<g.itens.length;j++){
-          var it = g.itens[j];
-          body.push([
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             it.codigo, it.nome, String(it.estoque),
-            it.custo.toFixed(2), it.dist.toFixed(2),
-            it.totalCusto.toFixed(2), it.totalDist.toFixed(2)
-          ]);
-        }
 
-        // Rodapé de totais do fornecedor
-        var foot = [[
-          { content: 'TOTAIS DO FORNECEDOR', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: String(g.total_qtd), styles: { fontStyle: 'bold' } },
-          { content: '', styles: { fontStyle: 'bold' } },
-          { content: '', styles: { fontStyle: 'bold' } },
-          { content: 'R$ ' + g.total_custo.toFixed(2), styles: { fontStyle: 'bold' } },
-          { content: 'R$ ' + g.total_dist.toFixed(2), styles: { fontStyle: 'bold' } }
-        ]];
 
-        doc.autoTable({
-          startY: y,
-          head: head,
-          body: body,
-          foot: foot,
-          showFoot: 'everyPage',
-          margin: { left: margem, right: margem },
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [13, 110, 253] },
-          footStyles: { fillColor: [233, 236, 239], textColor: 0, fontStyle: 'bold' }
-        });
-      }
 
-      // Resumo geral (todos os fornecedores)
-      var gTotal = grupos.totalGeral;
-      var endY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 30 : y + 30;
-      doc.setFillColor(220, 220, 220);
-      doc.rect(margem - 5, endY - 15, 550, 60, 'F');
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'bold');
-      doc.text('RESUMO GERAL DO ESTOQUE (TODOS OS FORNECEDORES)', margem, endY);
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(10);
-      endY += 16;
-      doc.text('Quantidade Total Geral: ' + gTotal.qtd, margem, endY);
-      endY += 14;
-      doc.text('Valor Total Geral (Custo): R$ ' + gTotal.custo.toFixed(2), margem, endY);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       endY += 14;
       doc.text('Valor Total Geral (Distribuição): R$ ' + gTotal.dist.toFixed(2), margem, endY);
 
@@ -6015,8 +6084,8 @@ document.addEventListener('DOMContentLoaded', function(){
               <b>Produto:</b> ${a.prod.nome || a.prod.codigo || '—'}<br>
               <b>Estoque atual:</b> ${a.prod.estoque_calculado || a.prod.qtd || a.prod.estoque || 0}<br>
               <b>Estoque mínimo:</b> ${a.prod.estoqueMinimo || cfg.estoqueMinimo}<br>
-              <b>Custo:</b> R$ ${(a.prod.custo || a.prod.valor_custo || 0).toFixed(2)}<br>
-              <b>Distribuição:</b> R$ ${(a.prod.dist || a.prod.valor_dist || 0).toFixed(2)}
+              <b>Custo:</b> R$ ${Number(a.prod.custo || a.prod.valor_custo || 0).toFixed(2)}<br>
+              <b>Distribuição:</b> R$ ${Number(a.prod.dist || a.prod.valor_dist || 0).toFixed(2)}
             </p>
           </div>
           <div class="card-footer d-flex justify-content-between">

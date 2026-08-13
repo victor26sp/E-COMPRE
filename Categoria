@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Categorias — Mercado Livre</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --yellow:#FFE600;
+  --dark:#12121F;
+  --ink:#26263A;
+  --muted:#767689;
+  --bg:#F7F6F1;
+  --card:#FFFFFF;
+  --line:#E7E4D8;
+
+  --g-tech:#2968C8;   --g-tech-bg:#EAF1FC;
+  --g-casa:#1E9E6B;   --g-casa-bg:#E7F8F0;
+  --g-moda:#D6336C;   --g-moda-bg:#FCEAF1;
+  --g-veic:#E8590C;   --g-veic-bg:#FDEEE3;
+  --g-lazer:#7048E8;  --g-lazer-bg:#F1ECFD;
+  --g-outros:#495057; --g-outros-bg:#EEEFF1;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+}
+h1,h2,h3,.brand,.cat-title,.group-title{font-family:'Space Grotesk',sans-serif;}
+::selection{background:var(--yellow);}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:var(--dark);
+  color:#fff;
+  padding:10px 0;
+  border-bottom:3px solid var(--yellow);
+}
+.topbar .brand{font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:8px;}
+.topbar .brand i{color:var(--yellow);}
+.topbar .toolbar-btn{
+  background:transparent;
+  border:1px solid rgba(255,255,255,.2);
+  color:#e8e8ee;
+  font-size:.78rem;
+  padding:5px 12px;
+  border-radius:8px;
+  transition:.15s;
+}
+.topbar .toolbar-btn:hover{border-color:var(--yellow); color:var(--yellow);}
+
+/* ===== HERO ===== */
+.hero{
+  background:var(--dark);
+  color:#fff;
+  padding:46px 0 84px;
+  position:relative;
+  overflow:hidden;
+}
+.hero-grid{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size:42px 42px;
+  mask-image:radial-gradient(ellipse at top right, black, transparent 70%);
+}
+.hero::after{
+  content:""; position:absolute; right:-140px; top:-160px;
+  width:460px; height:460px; background:var(--yellow); border-radius:50%; opacity:.10;
+}
+.hero .eyebrow{
+  letter-spacing:.14em; text-transform:uppercase; font-size:.72rem;
+  color:var(--yellow); font-weight:700;
+}
+.hero h1{font-size:clamp(1.9rem,3.6vw,2.9rem); font-weight:700; line-height:1.08; margin:.5rem 0 1rem;}
+.hero p.lead{color:#c6c6d4; max-width:600px; font-size:1rem;}
+.stat-row{margin-top:1.75rem; position:relative; z-index:2;}
+.stat{border-left:2px solid rgba(255,230,0,.55); padding-left:12px;}
+.stat .num{font-family:'Space Grotesk',sans-serif; font-size:1.6rem; font-weight:700; color:var(--yellow); line-height:1;}
+.stat .lbl{font-size:.72rem; color:#9d9dad; text-transform:uppercase; letter-spacing:.05em;}
+
+/* ===== SEARCH ===== */
+.search-wrap{margin-top:-40px; position:relative; z-index:10;}
+.search-card{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 20px 44px -20px rgba(18,18,31,.28); padding:16px 20px;
+}
+#searchInput{border:none; outline:none; font-size:1rem; width:100%; background:transparent;}
+#resultCount{font-size:.78rem; color:var(--muted); white-space:nowrap;}
+.group-filters{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.gf-btn{
+  border:1px solid var(--line); background:#fff; border-radius:999px;
+  padding:5px 13px; font-size:.76rem; font-weight:600; color:var(--ink);
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer; transition:.15s;
+}
+.gf-btn .dot{width:8px;height:8px;border-radius:50%;}
+.gf-btn.active{border-color:transparent; color:#fff;}
+.gf-btn.active .dot{background:#fff !important;}
+
+/* ===== LAYOUT ===== */
+.layout{display:grid; grid-template-columns:250px 1fr; gap:28px; align-items:start; margin-top:26px;}
+@media (max-width:991px){.layout{grid-template-columns:1fr;}}
+
+/* SIDEBAR */
+.sidebar{position:sticky; top:70px; max-height:calc(100vh - 90px); overflow-y:auto; padding-right:6px;}
+.sidebar::-webkit-scrollbar{width:5px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:6px;}
+.sb-group{margin-bottom:4px;}
+.sb-group-head{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:10px; font-size:.8rem; font-weight:700;
+  color:var(--ink); cursor:default;
+}
+.sb-group-head .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+.sb-cat-link{
+  display:block; padding:6px 10px 6px 27px; font-size:.79rem; color:var(--muted);
+  text-decoration:none; border-radius:8px; border-left:2px solid transparent;
+  transition:.12s;
+}
+.sb-cat-link:hover{color:var(--ink); background:#fff;}
+.sb-cat-link.active{color:var(--ink); font-weight:600; background:#fff; border-left-color:var(--yellow);}
+
+/* MAIN */
+.group-section{margin-bottom:14px; scroll-margin-top:70px;}
+.group-banner{
+  display:flex; align-items:center; gap:10px;
+  padding:12px 16px; border-radius:14px; margin-bottom:14px;
+}
+.group-banner i{font-size:1.15rem;}
+.group-title{font-size:1rem; font-weight:700; margin:0;}
+.group-sub{font-size:.76rem; opacity:.75; margin:0;}
+
+.cat-card{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  margin-bottom:14px; overflow:hidden; scroll-margin-top:70px;
+}
+.cat-header{
+  display:flex; align-items:center; gap:14px; padding:16px 18px; cursor:pointer; user-select:none;
+}
+.cat-icon{
+  width:42px; height:42px; flex:0 0 42px; border-radius:11px;
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+}
+.cat-title{font-size:1rem; font-weight:700; margin:0;}
+.cat-meta{font-size:.74rem; color:var(--muted);}
+.cat-id{font-size:.66rem; color:var(--muted); background:#F3F1E8; border-radius:6px; padding:1px 7px; font-family:monospace;}
+.chevron{margin-left:auto; transition:transform .25s; color:var(--muted);}
+.cat-header[aria-expanded="true"] .chevron{transform:rotate(180deg);}
+
+.subcats{padding:0 18px 18px; display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:10px;}
+.subcats.list-view{grid-template-columns:1fr;}
+.sub-card{border:1px solid var(--line); border-radius:12px; padding:13px 15px; background:#FCFCF9; transition:.15s;}
+.sub-card:hover{box-shadow:0 8px 20px -12px rgba(18,18,31,.25);}
+.sub-card h4{font-size:.87rem; font-weight:700; margin-bottom:3px; color:var(--dark);}
+.sub-card p{font-size:.78rem; color:#5c5c6b; margin:0 0 8px; line-height:1.4;}
+.leaf-tags{display:flex; flex-wrap:wrap; gap:5px;}
+.leaf-tag{
+  font-size:.68rem; padding:2px 8px; border-radius:999px; background:#fff;
+  border:1px solid var(--line); color:var(--muted);
+}
+mark{background:var(--yellow); padding:0 2px; border-radius:2px;}
+.hidden{display:none !important;}
+
+footer{padding:38px 0 60px; color:var(--muted); font-size:.83rem;}
+footer a{color:var(--g-tech);}
+footer code{background:#efeee6; padding:1px 5px; border-radius:5px;}
+
+.back-top{
+  position:fixed; bottom:22px; right:22px; width:44px; height:44px; border-radius:50%;
+  background:var(--dark); color:var(--yellow); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 10px 24px -8px rgba(0,0,0,.4); text-decoration:none; opacity:0; pointer-events:none; transition:.2s; z-index:30;
+}
+.back-top.show{opacity:1; pointer-events:auto;}
+
+@media (max-width:576px){
+  .hero{padding:36px 0 64px;}
+  .subcats{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body id="top">
+
+<div class="topbar">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div class="brand"><i class="bi bi-diagram-3-fill"></i> Mapa ML</div>
+    <div class="d-flex gap-2">
+      <button class="toolbar-btn" id="expandAllBtn"><i class="bi bi-arrows-expand"></i> Expandir tudo</button>
+      <button class="toolbar-btn" id="collapseAllBtn"><i class="bi bi-arrows-collapse"></i> Recolher tudo</button>
+      <button class="toolbar-btn" id="viewToggleBtn"><i class="bi bi-grid-3x3-gap"></i> <span id="viewToggleLabel">Ver em lista</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="container position-relative">
+    <div class="eyebrow">Documentação Mercado Livre · Site MLB (Brasil)</div>
+    <h1>Mapa completo de categorias,<br>subcategorias e exemplos de produtos</h1>
+    <p class="lead">Árvore de categorias do Mercado Livre organizada em 6 grandes grupos, com subcategorias e exemplos reais de produtos em cada uma — baseada na API oficial de desenvolvedores.</p>
+    <div class="row stat-row g-3">
+      <div class="col-4 col-md-2"><div class="stat"><div class="num" id="statCats">–</div><div class="lbl">Categorias</div></div></div>
+      <div class="col-4 col-md-2"><div class="stat"><div class="num" id="statSubs">–</div><div class="lbl">Subcategorias</div></div></div>
+      <div class="col-4 col-md-2"><div class="stat"><div class="num" id="statLeaves">–</div><div class="lbl">Exemplos</div></div></div>
+      <div class="col-4 col-md-2"><div class="stat"><div class="num">6</div><div class="lbl">Grupos</div></div></div>
+      <div class="col-4 col-md-2"><div class="stat"><div class="num">MLB</div><div class="lbl">Site Brasil</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="search-wrap">
+    <div class="search-card">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-search fs-5 text-muted"></i>
+        <input id="searchInput" type="text" placeholder="Buscar categoria, subcategoria ou produto (ex: 'drone', 'tênis', 'geladeira')...">
+        <span id="resultCount"></span>
+      </div>
+      <div class="group-filters" id="groupFilters"></div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main id="mainContent"></main>
+  </div>
+
+  <div id="noResults" class="text-center py-5 hidden">
+    <i class="bi bi-emoji-frown fs-1 text-muted"></i>
+    <p class="mt-2 text-muted">Nenhum resultado encontrado. Tente outro termo.</p>
+  </div>
+</div>
+
+<footer class="container">
+  <hr class="mb-4" style="border-color:var(--line)">
+  <p><strong>Fonte:</strong> categorias raiz obtidas via <code>GET https://api.mercadolibre.com/sites/MLB/categories</code> (documentação oficial de desenvolvedores do Mercado Livre). Subcategorias e exemplos de produtos organizados a partir da árvore pública do site para fins de referência. Só se publica em categorias‑folha; a árvore completa com atributos obrigatórios pode ser baixada via <code>/sites/MLB/categories/all</code>.</p>
+  <p class="mb-0">Cada país (MLA‑Argentina, MLM‑México, MLC‑Chile, MCO‑Colômbia...) possui sua própria árvore de categorias.</p>
+</footer>
+
+<a href="#top" class="back-top" id="backTop"><i class="bi bi-arrow-up"></i></a>
+
+<script>
+/* ===================== GROUPS ===================== */
+const GROUPS = [
+  {id:"tech",   name:"Tecnologia",           icon:"bi-cpu",           color:"var(--g-tech)",   bg:"var(--g-tech-bg)"},
+  {id:"casa",   name:"Casa & Vida",          icon:"bi-house-heart",   color:"var(--g-casa)",   bg:"var(--g-casa-bg)"},
+  {id:"moda",   name:"Moda & Beleza",        icon:"bi-bag-heart",     color:"var(--g-moda)",   bg:"var(--g-moda-bg)"},
+  {id:"veic",   name:"Veículos & Indústria", icon:"bi-truck-front",   color:"var(--g-veic)",   bg:"var(--g-veic-bg)"},
+  {id:"lazer",  name:"Lazer & Cultura",      icon:"bi-controller",    color:"var(--g-lazer)",  bg:"var(--g-lazer-bg)"},
+  {id:"outros", name:"Imóveis & Serviços",   icon:"bi-briefcase",     color:"var(--g-outros)", bg:"var(--g-outros-bg)"}
+];
+
+/* ===================== DATA ===================== */
+const DATA = [
+{name:"Acessórios para Veículos", icon:"bi-car-front", id:"MLB5672", group:"veic", subs:[
+ {name:"Som e Multimídia Automotiva", desc:"Áudio e telas para o carro.", leaves:["Alto-falantes automotivos","Centrais multimídia","Subwoofers","Módulos amplificadores"]},
+ {name:"Peças de Reposição", desc:"Componentes mecânicos de troca.", leaves:["Pastilhas de freio","Discos de freio","Correias dentadas","Filtros de óleo"]},
+ {name:"Acessórios para Interior", desc:"Proteção e conforto do habitáculo.", leaves:["Tapetes automotivos","Capas de banco","Organizadores de porta-malas","Apoios de cabeça"]},
+ {name:"Acessórios para Exterior", desc:"Estética e proteção externa.", leaves:["Spoilers","Faróis de LED","Películas automotivas","Frisos e emblemas"]},
+ {name:"Acessórios para Motos", desc:"Itens específicos para motociclistas.", leaves:["Baús para moto","Protetores de motor","Ponteiras de escape","Manoplas"]},
+ {name:"Pneus e Rodas", desc:"Rodagem e rodas para carro e moto.", leaves:["Pneus para carro","Pneus para moto","Rodas de liga leve","Calibradores digitais"]},
+ {name:"Ferramentas Automotivas", desc:"Manutenção feita em casa.", leaves:["Macacos hidráulicos","Chaves de roda","Scanners automotivos","Kits de ferramentas"]},
+ {name:"Limpeza Automotiva", desc:"Estética e higienização veicular.", leaves:["Ceras automotivas","Shampoo automotivo","Aspiradores portáteis","Kits de polimento"]},
+ {name:"Segurança Veicular", desc:"Proteção contra furto e monitoramento.", leaves:["Alarmes automotivos","Rastreadores GPS","Travas de câmbio","Sensores de estacionamento"]}
+]},
+{name:"Agro", icon:"bi-tractor", id:"MLB271599", group:"veic", subs:[
+ {name:"Máquinas Agrícolas", desc:"Equipamentos de grande porte para lavoura.", leaves:["Tratores","Colheitadeiras","Plantadeiras","Pulverizadores"]},
+ {name:"Implementos Agrícolas", desc:"Acoplados a tratores.", leaves:["Arados","Grades niveladoras","Roçadeiras","Subsoladores"]},
+ {name:"Insumos Agrícolas", desc:"Base para plantio e manejo.", leaves:["Sementes certificadas","Fertilizantes","Defensivos agrícolas","Corretivos de solo"]},
+ {name:"Irrigação", desc:"Sistemas de água para a lavoura.", leaves:["Aspersores","Gotejadores","Motobombas","Mangueiras de irrigação"]},
+ {name:"Pecuária", desc:"Manejo de rebanhos.", leaves:["Cochos","Cercas elétricas","Balanças para gado","Brincos de identificação"]},
+ {name:"Avicultura", desc:"Criação de aves.", leaves:["Incubadoras","Comedouros automáticos","Bebedouros para aves","Gaiolas de postura"]},
+ {name:"Apicultura", desc:"Criação de abelhas e extração de mel.", leaves:["Colmeias","Roupas de apicultor","Extratores de mel","Fumegadores"]},
+ {name:"Silos e Armazenagem", desc:"Pós-colheita e estocagem.", leaves:["Silos metálicos","Secadores de grãos","Elevadores de caçambas","Lonas para silagem"]}
+]},
+{name:"Alimentos e Bebidas", icon:"bi-basket", id:"MLB1403", group:"casa", subs:[
+ {name:"Mercearia", desc:"Itens básicos de despensa.", leaves:["Arroz e feijão","Massas","Óleos e azeites","Temperos e condimentos"]},
+ {name:"Bebidas Alcoólicas", desc:"Vinhos, cervejas e destilados.", leaves:["Vinhos","Cervejas artesanais","Whisky","Cachaças premium"]},
+ {name:"Bebidas Não Alcoólicas", desc:"Cafés, chás e sucos.", leaves:["Cafés especiais","Chás","Sucos naturais","Refrigerantes"]},
+ {name:"Suplementos Alimentares", desc:"Nutrição esportiva e vitaminas.", leaves:["Whey protein","Creatina","Multivitamínicos","Barras proteicas"]},
+ {name:"Produtos Naturais e Orgânicos", desc:"Alimentação saudável.", leaves:["Mel","Granola","Cereais integrais","Alimentos sem glúten"]},
+ {name:"Doces e Sobremesas", desc:"Confeitaria e guloseimas.", leaves:["Chocolates finos","Bolos","Balas e confeitos","Doces regionais"]},
+ {name:"Congelados e Frios", desc:"Refrigerados prontos para consumo.", leaves:["Embutidos","Queijos especiais","Massas congeladas","Pratos prontos"]},
+ {name:"Utensílios para Alimentos", desc:"Armazenamento e conservação.", leaves:["Potes herméticos","Seladoras a vácuo","Dosadores","Garrafas térmicas"]}
+]},
+{name:"Animais", icon:"bi-paw", id:"MLB1071", group:"casa", subs:[
+ {name:"Ração e Alimentação Pet", desc:"Nutrição para todos os pets.", leaves:["Ração para cães","Ração para gatos","Ração para aves","Ração para peixes"]},
+ {name:"Acessórios para Cães e Gatos", desc:"Uso diário com o pet.", leaves:["Coleiras","Casinhas","Caixas de areia","Comedouros automáticos"]},
+ {name:"Aquarismo", desc:"Montagem e manutenção de aquários.", leaves:["Aquários","Filtros para aquário","Bombas de ar","Peixes ornamentais"]},
+ {name:"Terrários e Répteis", desc:"Cuidados com répteis e anfíbios.", leaves:["Terrários","Lâmpadas de aquecimento","Substratos","Comedouros para répteis"]},
+ {name:"Saúde Animal", desc:"Medicamentos e prevenção.", leaves:["Antipulgas","Vermífugos","Suplementos veterinários","Shampoos medicinais"]},
+ {name:"Adestramento", desc:"Treino e comportamento.", leaves:["Guias","Brinquedos de treino","Cercas de contenção","Apitos de adestramento"]},
+ {name:"Transporte de Animais", desc:"Deslocamento seguro do pet.", leaves:["Caixas de transporte","Coleiras peitorais","Bolsas para pet","Cintos de segurança pet"]},
+ {name:"Aves", desc:"Criação de pássaros domésticos.", leaves:["Gaiolas","Poleiros","Alimentos para aves","Ninhos"]}
+]},
+{name:"Antiguidades e Coleções", icon:"bi-gem", id:"MLB1367", group:"lazer", subs:[
+ {name:"Numismática", desc:"Moedas e cédulas de coleção.", leaves:["Moedas antigas","Cédulas raras","Medalhas comemorativas","Moedas comemorativas"]},
+ {name:"Filatelia", desc:"Selos para colecionadores.", leaves:["Selos nacionais","Selos internacionais","Blocos filatélicos","Álbuns para selos"]},
+ {name:"Móveis Antigos", desc:"Peças de época restauradas.", leaves:["Cômodas antigas","Baús decorativos","Cadeiras de época","Espelhos antigos"]},
+ {name:"Relíquias Militares", desc:"Itens históricos militares.", leaves:["Medalhas militares","Uniformes históricos","Capacetes antigos","Insígnias"]},
+ {name:"Action Figures Raros", desc:"Brinquedos descontinuados.", leaves:["Bonecos vintage","Figuras de ação descontinuadas","Brinquedos retrô","Miniaturas raras"]},
+ {name:"Cards Colecionáveis", desc:"Cartas de jogos e esportes.", leaves:["Cards de jogos TCG","Cards esportivos","Cards holográficos","Álbuns de figurinhas"]},
+ {name:"Discos de Vinil Raros", desc:"LPs de valor de coleção.", leaves:["LPs de coleção","Vinis importados","Edições limitadas","Compactos antigos"]},
+ {name:"Louças e Porcelanas", desc:"Peças decorativas antigas.", leaves:["Porcelana antiga","Cristais decorativos","Jogos de chá antigos","Vasos de época"]}
+]},
+{name:"Arte, Papelaria e Armarinho", icon:"bi-palette", id:"MLB1368", group:"lazer", subs:[
+ {name:"Material Escolar", desc:"Itens do dia a dia estudantil.", leaves:["Cadernos","Mochilas","Estojos","Canetas e lápis"]},
+ {name:"Material de Escritório", desc:"Organização no trabalho.", leaves:["Grampeadores","Organizadores de mesa","Papel sulfite","Pastas"]},
+ {name:"Armarinho", desc:"Costura e confecção.", leaves:["Linhas de costura","Tecidos","Botões","Zíperes"]},
+ {name:"Tintas e Pincéis", desc:"Materiais de pintura artística.", leaves:["Tintas acrílicas","Aquarelas","Pincéis profissionais","Tintas a óleo"]},
+ {name:"Scrapbooking", desc:"Decoração de álbuns e cadernos.", leaves:["Papéis decorados","Carimbos","Adesivos decorativos","Fitas washi"]},
+ {name:"Molduras e Telas", desc:"Suporte para obras de arte.", leaves:["Molduras decorativas","Telas para pintura","Cavaletes","Quadros em branco"]},
+ {name:"Cadernos Artísticos", desc:"Registro criativo e esboços.", leaves:["Sketchbooks","Blocos de desenho","Cadernos de aquarela","Diários ilustrados"]},
+ {name:"Artesanato", desc:"Criação manual e DIY.", leaves:["EVA","Massinha de modelar","Miçangas","Biscuit"]}
+]},
+{name:"Bebês", icon:"bi-balloon", id:"MLB1384", group:"casa", subs:[
+ {name:"Enxoval", desc:"Primeiras roupas e itens de berço.", leaves:["Roupinhas de bebê","Mantas","Kits de berço","Toalhas com capuz"]},
+ {name:"Passeio", desc:"Locomoção segura do bebê.", leaves:["Carrinhos de bebê","Bebês-conforto","Cadeirinhas para carro","Slings e canguru"]},
+ {name:"Alimentação", desc:"Refeições do bebê.", leaves:["Mamadeiras","Potes de papinha","Cadeiras de alimentação","Babadores"]},
+ {name:"Higiene", desc:"Cuidados diários com o bebê.", leaves:["Fraldas","Produtos de banho","Trocadores portáteis","Termômetros infantis"]},
+ {name:"Quarto do Bebê", desc:"Mobiliário e decoração do quarto.", leaves:["Berços","Cômodas","Móbiles musicais","Luminárias de presença"]},
+ {name:"Segurança Infantil", desc:"Proteção dentro de casa.", leaves:["Babás eletrônicas","Protetores de tomada","Grades de proteção","Protetores de quina"]},
+ {name:"Brinquedos para Bebês", desc:"Estímulo sensorial inicial.", leaves:["Chocalhos","Tapetes de atividades","Mordedores","Móbiles sensoriais"]},
+ {name:"Maternidade", desc:"Itens para a gestante e mãe.", leaves:["Roupas de amamentação","Almofadas de amamentação","Bolsas maternidade","Faixas pós-parto"]}
+]},
+{name:"Beleza e Cuidado Pessoal", icon:"bi-flower1", id:"MLB1246", group:"moda", subs:[
+ {name:"Maquiagem", desc:"Produtos de make para o rosto.", leaves:["Bases","Batons","Paletas de sombra","Pincéis de maquiagem"]},
+ {name:"Skincare", desc:"Rotina de cuidados com a pele.", leaves:["Cremes hidratantes","Séruns faciais","Protetor solar","Máscaras faciais"]},
+ {name:"Cabelo", desc:"Lavagem, secagem e styling.", leaves:["Shampoos","Condicionadores","Secadores","Chapinhas"]},
+ {name:"Perfumaria", desc:"Fragrâncias pessoais.", leaves:["Perfumes nacionais","Perfumes importados","Body splash","Desodorantes colônia"]},
+ {name:"Cuidados Masculinos", desc:"Barba e grooming.", leaves:["Barbeadores elétricos","Óleos para barba","Balms","Kits de barbear"]},
+ {name:"Unhas", desc:"Manicure e pedicure.", leaves:["Esmaltes","Kits de manicure","Cabines de secagem","Alongamento de unhas"]},
+ {name:"Aparelhos de Beleza", desc:"Eletrônicos de estética.", leaves:["Depiladoras elétricas","Massageadores faciais","Escovas de limpeza facial","Aparelhos de LED"]},
+ {name:"Higiene Pessoal", desc:"Cuidados básicos diários.", leaves:["Desodorantes","Sabonetes","Cremes dentais","Fio dental"]}
+]},
+{name:"Brinquedos e Hobbies", icon:"bi-joystick", id:"MLB1132", group:"lazer", subs:[
+ {name:"Bonecas e Bonecos", desc:"Brinquedos de personagem.", leaves:["Bonecas","Action figures infantis","Bonecos de pano","Bonecas de coleção"]},
+ {name:"Carrinhos e Veículos de Brinquedo", desc:"Miniaturas e controle remoto.", leaves:["Miniaturas de carros","Carros de controle remoto","Pistas de corrida","Caminhões de brinquedo"]},
+ {name:"Blocos de Montar", desc:"Construção e criatividade.", leaves:["Kits de montar","Blocos compatíveis com LEGO","Peças avulsas","Sets temáticos"]},
+ {name:"Jogos de Tabuleiro", desc:"Diversão em grupo.", leaves:["Quebra-cabeças","Jogos de RPG","Jogos de cartas","Jogos em família"]},
+ {name:"Pelúcias", desc:"Bichinhos macios de todos os tamanhos.", leaves:["Ursinhos de pelúcia","Bichinhos de pelúcia","Almofadas de pelúcia","Pelúcias de personagens"]},
+ {name:"Aeromodelismo", desc:"Voo e montagem de modelos.", leaves:["Drones de brinquedo","Aviões de montar","Helicópteros de controle remoto","Kits de aeromodelismo"]},
+ {name:"Bonecos Colecionáveis", desc:"Itens de exposição para fãs.", leaves:["Funko Pops","Miniaturas de personagens","Estátuas colecionáveis","Bonecos articulados"]},
+ {name:"Brinquedos Educativos", desc:"Aprendizado através do brincar.", leaves:["Kits de ciências","Blocos pedagógicos","Jogos didáticos","Brinquedos Montessori"]}
+]},
+{name:"Calçados, Roupas e Bolsas", icon:"bi-bag", id:"MLB1430", group:"moda", subs:[
+ {name:"Roupas Femininas", desc:"Vestuário do dia a dia e social.", leaves:["Vestidos","Blusas","Calças femininas","Conjuntos"]},
+ {name:"Roupas Masculinas", desc:"Vestuário casual e social.", leaves:["Camisas","Bermudas","Ternos","Jaquetas"]},
+ {name:"Calçados Femininos", desc:"Sapatos para todas as ocasiões.", leaves:["Sapatos","Sandálias","Tênis femininos","Botas femininas"]},
+ {name:"Calçados Masculinos", desc:"Do casual ao formal.", leaves:["Tênis masculinos","Sapatênis","Mocassins","Botas masculinas"]},
+ {name:"Bolsas e Mochilas", desc:"Transporte de pertences.", leaves:["Bolsas de couro","Mochilas casuais","Bolsas executivas","Necessaires"]},
+ {name:"Moda Íntima", desc:"Peças íntimas e de descanso.", leaves:["Lingerie","Cuecas","Pijamas","Moda sono"]},
+ {name:"Moda Praia", desc:"Vestuário para praia e piscina.", leaves:["Biquínis","Sungas","Saídas de praia","Maiôs"]},
+ {name:"Acessórios de Moda", desc:"Complementos de estilo.", leaves:["Cintos","Óculos de sol","Chapéus","Lenços"]}
+]},
+{name:"Câmeras e Acessórios", icon:"bi-camera", id:"MLB1039", group:"tech", subs:[
+ {name:"Câmeras DSLR e Mirrorless", desc:"Fotografia profissional.", leaves:["Corpos de câmera","Kits com lente","Câmeras full frame","Câmeras APS-C"]},
+ {name:"Câmeras Compactas", desc:"Uso casual e portátil.", leaves:["Point-and-shoot","Câmeras instantâneas","Câmeras subaquáticas","Câmeras vintage"]},
+ {name:"Filmadoras", desc:"Captação de vídeo dedicada.", leaves:["Câmeras de ação","Filmadoras profissionais","Câmeras 360°","Filmadoras portáteis"]},
+ {name:"Drones", desc:"Imagens e vídeos aéreos.", leaves:["Drones com câmera","Peças de reposição","Baterias para drone","Hélices"]},
+ {name:"Lentes Fotográficas", desc:"Óptica intercambiável.", leaves:["Lentes grande angular","Teleobjetivas","Lentes macro","Lentes fixas"]},
+ {name:"Iluminação Fotográfica", desc:"Controle de luz em estúdio.", leaves:["Softbox","Flashes externos","Ring lights","Refletores"]},
+ {name:"Tripés e Suportes", desc:"Estabilidade de imagem.", leaves:["Tripés","Gimbals","Estabilizadores para celular","Suportes articulados"]},
+ {name:"Armazenamento para Fotógrafos", desc:"Guarda e transferência de arquivos.", leaves:["Cartões SD","Cartões CF","HDs externos","Leitores de cartão"]}
+]},
+{name:"Carros, Motos e Outros Veículos", icon:"bi-truck", id:"MLB1743", group:"veic", subs:[
+ {name:"Carros", desc:"Veículos de passeio novos e usados.", leaves:["Sedãs","SUVs","Hatches","Picapes"]},
+ {name:"Motos", desc:"Duas rodas para todos os estilos.", leaves:["Motos de rua","Scooters","Motos trail","Motos custom"]},
+ {name:"Caminhões e Utilitários", desc:"Transporte de carga.", leaves:["Caminhões","Vans","Utilitários leves","Furgões"]},
+ {name:"Náutica", desc:"Embarcações e lazer aquático.", leaves:["Barcos","Lanchas","Jet skis","Botes infláveis"]},
+ {name:"Veículos Elétricos", desc:"Mobilidade elétrica.", leaves:["Carros elétricos","Motos elétricas","Patinetes elétricos","Bicicletas elétricas"]},
+ {name:"Ônibus e Micro-ônibus", desc:"Transporte coletivo.", leaves:["Ônibus urbanos","Micro-ônibus","Vans escolares","Ônibus de turismo"]},
+ {name:"Reboques e Trailers", desc:"Cargas e camping sobre rodas.", leaves:["Carretas utilitárias","Trailers de camping","Reboques para moto","Cargo trailers"]},
+ {name:"Veículos Off-road", desc:"Uso rural e fora de estrada.", leaves:["Quadriciclos","UTVs","Buggys","Utilitários rurais"]}
+]},
+{name:"Casa, Móveis e Decoração", icon:"bi-house-door", id:"MLB1574", group:"casa", subs:[
+ {name:"Móveis para Sala", desc:"Ambiente de convívio.", leaves:["Sofás","Racks para TV","Mesas de centro","Estantes"]},
+ {name:"Móveis para Quarto", desc:"Descanso e armazenamento.", leaves:["Camas","Guarda-roupas","Cômodas","Criados-mudos"]},
+ {name:"Cozinha", desc:"Preparo e armazenamento de alimentos.", leaves:["Armários planejados","Utensílios de cozinha","Panelas","Talheres"]},
+ {name:"Decoração", desc:"Personalização dos ambientes.", leaves:["Quadros decorativos","Tapetes","Luminárias","Vasos decorativos"]},
+ {name:"Cama, Mesa e Banho", desc:"Têxteis para o lar.", leaves:["Jogos de cama","Toalhas","Roupas de mesa","Cobertores"]},
+ {name:"Jardim e Área Externa", desc:"Convívio ao ar livre.", leaves:["Móveis externos","Churrasqueiras","Vasos para plantas","Redes de descanso"]},
+ {name:"Organização", desc:"Otimização de espaço.", leaves:["Prateleiras","Caixas organizadoras","Cabideiros","Organizadores de armário"]},
+ {name:"Iluminação Residencial", desc:"Ambientação por luz.", leaves:["Lustres","Luminárias de mesa","Fitas de LED","Abajures"]}
+]},
+{name:"Celulares e Telefones", icon:"bi-phone", id:"MLB1051", group:"tech", subs:[
+ {name:"Smartphones", desc:"Aparelhos das principais marcas.", leaves:["iPhone","Samsung Galaxy","Xiaomi","Motorola"]},
+ {name:"Acessórios para Celular", desc:"Proteção e energia do aparelho.", leaves:["Capas","Películas de vidro","Carregadores","Suportes veiculares"]},
+ {name:"Smartwatches", desc:"Wearables conectados.", leaves:["Relógios inteligentes","Pulseiras fitness","Smartbands","Relógios com GPS"]},
+ {name:"Telefonia Fixa", desc:"Comunicação convencional.", leaves:["Telefones sem fio","Centrais PABX","Telefones com fio","Headsets para telefone"]},
+ {name:"Peças para Celular", desc:"Reparo e manutenção.", leaves:["Telas de reposição","Baterias","Conectores de carga","Câmeras de reposição"]},
+ {name:"Fones de Ouvido", desc:"Áudio pessoal móvel.", leaves:["Fones bluetooth","Fones com fio","Fones TWS","Headsets gamer"]},
+ {name:"Power Banks", desc:"Energia portátil extra.", leaves:["Carregadores portáteis 10000mAh","Power banks solares","Carregadores sem fio portáteis","Baterias externas"]},
+ {name:"Chips e Planos", desc:"Conectividade móvel.", leaves:["Chips pré-pagos","eSIM","Chips internacionais","Planos de dados"]}
+]},
+{name:"Construção", icon:"bi-bricks", id:"MLB1500", group:"casa", subs:[
+ {name:"Material Elétrico", desc:"Instalações elétricas.", leaves:["Fios e cabos","Disjuntores","Tomadas","Interruptores"]},
+ {name:"Material Hidráulico", desc:"Instalações de água e esgoto.", leaves:["Canos PVC","Registros","Conexões hidráulicas","Caixas d'água"]},
+ {name:"Portas e Janelas", desc:"Esquadrias e vedação.", leaves:["Esquadrias de alumínio","Portas de madeira","Janelas basculantes","Portões"]},
+ {name:"Pisos e Revestimentos", desc:"Acabamento de piso e parede.", leaves:["Porcelanatos","Pisos laminados","Azulejos","Rodapés"]},
+ {name:"Tintas e Acabamentos", desc:"Pintura e finalização.", leaves:["Tintas látex","Vernizes","Texturas","Massa corrida"]},
+ {name:"Telhados e Coberturas", desc:"Proteção da estrutura.", leaves:["Telhas cerâmicas","Telhas metálicas","Calhas","Mantas asfálticas"]},
+ {name:"Cimento e Argamassa", desc:"Base estrutural da obra.", leaves:["Cimento","Argamassa colante","Areia","Cal"]},
+ {name:"Ferragens", desc:"Fixação e funcionamento.", leaves:["Dobradiças","Parafusos","Trincos","Puxadores"]}
+]},
+{name:"Eletrodomésticos", icon:"bi-plug", id:"MLB5726", group:"casa", subs:[
+ {name:"Linha Branca", desc:"Grandes eletrodomésticos.", leaves:["Geladeiras","Fogões","Máquinas de lavar roupa","Lava e seca"]},
+ {name:"Climatização", desc:"Controle de temperatura ambiente.", leaves:["Ar-condicionado split","Ventiladores","Aquecedores","Climatizadores de ar"]},
+ {name:"Eletroportáteis de Cozinha", desc:"Preparo rápido de alimentos.", leaves:["Liquidificadores","Air fryers","Cafeteiras","Batedeiras"]},
+ {name:"Aspiradores", desc:"Limpeza doméstica.", leaves:["Aspiradores de pó","Robôs aspiradores","Aspiradores verticais","Aspiradores de água e pó"]},
+ {name:"Ferro de Passar", desc:"Cuidado com roupas.", leaves:["Ferros a vapor","Centrais de passar","Ferros a seco","Tábuas de passar"]},
+ {name:"Micro-ondas", desc:"Aquecimento e preparo rápido.", leaves:["Micro-ondas de bancada","Micro-ondas com grill","Micro-ondas embutidos","Micro-ondas compactos"]},
+ {name:"Adegas Climatizadas", desc:"Conservação de vinhos.", leaves:["Adegas 12 garrafas","Adegas 24 garrafas","Adegas duplo zona"]},
+ {name:"Purificadores de Água", desc:"Água potável em casa.", leaves:["Purificadores de bancada","Filtros de água","Bebedouros","Purificadores por osmose"]}
+]},
+{name:"Eletrônicos, Áudio e Vídeo", icon:"bi-tv", id:"MLB1000", group:"tech", subs:[
+ {name:"TVs", desc:"Telas para entretenimento.", leaves:["Smart TVs LED","TVs OLED","TVs QLED","TVs 4K"]},
+ {name:"Áudio", desc:"Som ambiente e home theater.", leaves:["Caixas de som bluetooth","Soundbars","Home theater","Caixas de som para festa"]},
+ {name:"Fones e Headsets", desc:"Áudio pessoal e gamer.", leaves:["Fones intra-auricular","Headsets gamer","Fones over-ear","Fones esportivos"]},
+ {name:"Vídeo", desc:"Projeção e reprodução de mídia.", leaves:["Projetores multimídia","Blu-ray players","Telas de projeção","Projetores portáteis"]},
+ {name:"Componentes Eletrônicos", desc:"Conectividade entre aparelhos.", leaves:["Cabos HDMI","Adaptadores","Conversores digitais","Extensores de sinal"]},
+ {name:"Rádios e Toca-discos", desc:"Áudio analógico e retrô.", leaves:["Rádios portáteis","Vitrolas retrô","Rádios relógio","Toca-fitas"]},
+ {name:"Streaming", desc:"Conteúdo sob demanda na TV.", leaves:["Chromecast","Fire TV Stick","Apple TV","TV Box Android"]},
+ {name:"Acessórios para TV", desc:"Instalação e uso da TV.", leaves:["Suportes de parede","Controles universais","Antenas digitais","Cabos de força"]}
+]},
+{name:"Esportes e Fitness", icon:"bi-bicycle", id:"MLB1276", group:"lazer", subs:[
+ {name:"Musculação", desc:"Treino de força.", leaves:["Halteres","Barras","Anilhas","Bancos de treino"]},
+ {name:"Cardio", desc:"Treino aeróbico em casa.", leaves:["Esteiras","Bicicletas ergométricas","Elípticos","Steppers"]},
+ {name:"Ciclismo", desc:"Pedalar por esporte ou lazer.", leaves:["Bicicletas speed","Mountain bikes","Capacetes","Peças de reposição"]},
+ {name:"Futebol", desc:"Prática e uniformes.", leaves:["Bolas de futebol","Chuteiras","Uniformes de time","Caneleiras"]},
+ {name:"Corrida", desc:"Equipamento para corredores.", leaves:["Tênis de corrida","Roupas técnicas","Relógios de corrida","Garrafas de hidratação"]},
+ {name:"Natação", desc:"Prática na piscina ou no mar.", leaves:["Óculos de natação","Roupas de natação","Boias","Toucas"]},
+ {name:"Esportes de Aventura", desc:"Trilha, escalada e camping esportivo.", leaves:["Equipamentos de trilha","Material de escalada","Barracas esportivas","Mochilas de trilha"]},
+ {name:"Suplementos Esportivos", desc:"Performance e recuperação.", leaves:["Whey protein","Creatina","Pré-treino","BCAA"]}
+]},
+{name:"Ferramentas", icon:"bi-tools", id:"MLB263532", group:"casa", subs:[
+ {name:"Ferramentas Elétricas", desc:"Trabalho motorizado.", leaves:["Furadeiras","Parafusadeiras","Serras elétricas","Esmerilhadeiras"]},
+ {name:"Ferramentas Manuais", desc:"Uso manual tradicional.", leaves:["Chaves de fenda","Martelos","Alicates","Jogos de chaves"]},
+ {name:"Medição e Nível", desc:"Precisão em obras e projetos.", leaves:["Trenas","Níveis a laser","Multímetros","Paquímetros"]},
+ {name:"Solda", desc:"União de metais.", leaves:["Máquinas de solda MIG","Máquinas de solda TIG","Eletrodos","Máscaras de solda"]},
+ {name:"Compressores", desc:"Ar comprimido para oficina.", leaves:["Compressores de ar","Pistolas de pintura","Mangueiras de ar","Filtros de ar comprimido"]},
+ {name:"Segurança do Trabalho", desc:"Proteção individual.", leaves:["EPIs","Luvas de proteção","Capacetes de segurança","Óculos de proteção"]},
+ {name:"Geradores", desc:"Energia em locais sem rede.", leaves:["Geradores a gasolina","Geradores a diesel","Geradores inversores","Estabilizadores de energia"]},
+ {name:"Organização de Ferramentas", desc:"Guarda e transporte.", leaves:["Caixas de ferramentas","Maletas organizadoras","Carrinhos porta-ferramentas","Painéis de parede"]}
+]},
+{name:"Festas e Lembrancinhas", icon:"bi-gift", id:"MLB-FEST", group:"lazer", subs:[
+ {name:"Artigos para Festa", desc:"Ambientação de eventos.", leaves:["Balões","Toalhas temáticas","Bandeirolas","Chapéus de festa"]},
+ {name:"Decoração de Festa", desc:"Cenário para celebrações.", leaves:["Painéis personalizados","Bexigas metalizadas","Arcos de balões","Backdrops"]},
+ {name:"Lembrancinhas", desc:"Presentes para convidados.", leaves:["Brindes de aniversário","Lembrancinhas de casamento","Sacolinhas personalizadas","Potes decorados"]},
+ {name:"Fantasias", desc:"Vestuário temático.", leaves:["Fantasias infantis","Fantasias adultas","Acessórios de fantasia","Perucas temáticas"]},
+ {name:"Velas e Topos de Bolo", desc:"Detalhes do bolo de festa.", leaves:["Velas de aniversário","Toppers de bolo","Velas numéricas","Velas temáticas"]},
+ {name:"Descartáveis", desc:"Praticidade para servir convidados.", leaves:["Pratos descartáveis","Copos descartáveis","Talheres descartáveis","Guardanapos"]},
+ {name:"Convites", desc:"Comunicação do evento.", leaves:["Convites impressos","Convites digitais","Cartões personalizados","Convites interativos"]},
+ {name:"Itens Personalizados", desc:"Brindes com identidade própria.", leaves:["Canecas personalizadas","Camisetas personalizadas","Squeezes personalizados","Chaveiros personalizados"]}
+]},
+{name:"Games", icon:"bi-controller", id:"MLB1144", group:"tech", subs:[
+ {name:"Consoles", desc:"Plataformas de videogame.", leaves:["PlayStation 5","Xbox Series","Nintendo Switch","Consoles portáteis"]},
+ {name:"Jogos Físicos", desc:"Mídia física de jogos.", leaves:["Jogos para PS5","Jogos para Xbox","Jogos para Switch","Jogos para PC"]},
+ {name:"Jogos Digitais", desc:"Códigos e créditos digitais.", leaves:["Cartões PSN","Códigos Xbox Live","eShop Nintendo","Steam Wallet"]},
+ {name:"Acessórios Gamer", desc:"Periféricos para jogar.", leaves:["Controles","Headsets gamer","Volantes","Grip para controle"]},
+ {name:"PC Gamer", desc:"Hardware dedicado a jogos.", leaves:["Placas de vídeo","Gabinetes gamer","Teclados mecânicos","Mouses gamer"]},
+ {name:"Cadeiras Gamer", desc:"Conforto para longas sessões.", leaves:["Cadeiras ergonômicas","Apoio lombar","Cadeiras reclináveis","Cadeiras com almofadas"]},
+ {name:"Realidade Virtual", desc:"Imersão em 3D.", leaves:["Óculos VR","Controles VR","Acessórios de rastreamento","Jogos VR"]},
+ {name:"Games Retrô", desc:"Nostalgia de gerações anteriores.", leaves:["Consoles retrô","Cartuchos clássicos","Emuladores portáteis","Controles retrô"]}
+]},
+{name:"Imóveis", icon:"bi-buildings", id:"MLB1459", group:"outros", subs:[
+ {name:"Apartamentos à Venda", desc:"Unidades para compra.", leaves:["Studios","Apartamentos 2 quartos","Coberturas","Alto padrão"]},
+ {name:"Casas à Venda", desc:"Residências para compra.", leaves:["Casas térreas","Sobrados","Casas em condomínio","Casas de campo"]},
+ {name:"Terrenos e Lotes", desc:"Áreas para construção.", leaves:["Terrenos urbanos","Loteamentos","Terrenos comerciais","Chácaras em lote"]},
+ {name:"Imóveis para Aluguel", desc:"Locação residencial.", leaves:["Apartamentos para alugar","Casas para alugar","Kitnets","Studios para alugar"]},
+ {name:"Imóveis Comerciais", desc:"Espaços para negócios.", leaves:["Salas comerciais","Lojas","Galpões","Prédios comerciais"]},
+ {name:"Imóveis de Temporada", desc:"Locação por período curto.", leaves:["Casas de praia","Apartamentos de temporada","Chalés","Pousadas"]},
+ {name:"Imóveis Rurais", desc:"Propriedades no campo.", leaves:["Chácaras","Sítios","Fazendas","Haras"]},
+ {name:"Lançamentos", desc:"Empreendimentos novos.", leaves:["Imóveis na planta","Empreendimentos novos","Pré-lançamentos","Unidades em construção"]}
+]},
+{name:"Indústria e Comércio", icon:"bi-building-gear", id:"MLB1499", group:"veic", subs:[
+ {name:"Máquinas Industriais", desc:"Produção em escala.", leaves:["Máquinas de produção","Esteiras transportadoras","Prensas industriais","Máquinas de corte"]},
+ {name:"Embalagens", desc:"Acondicionamento comercial.", leaves:["Caixas de papelão","Sacolas plásticas","Filmes stretch","Etiquetas adesivas"]},
+ {name:"Mobiliário Corporativo", desc:"Ambientes de escritório.", leaves:["Cadeiras de escritório","Mesas corporativas","Armários de aço","Divisórias"]},
+ {name:"Segurança Empresarial", desc:"Proteção do negócio.", leaves:["Câmeras de CFTV","Extintores","Alarmes comerciais","Controle de acesso"]},
+ {name:"Sinalização", desc:"Comunicação visual comercial.", leaves:["Placas de sinalização","Adesivos comerciais","Totens","Faixas"]},
+ {name:"Limpeza Profissional", desc:"Manutenção de grandes áreas.", leaves:["Enceradeiras","Lavadoras industriais","Produtos a granel","Carrinhos de limpeza"]},
+ {name:"Gastronomia Comercial", desc:"Cozinhas profissionais.", leaves:["Fogões industriais","Fornos combinados","Fritadeiras industriais","Balcões refrigerados"]},
+ {name:"Refrigeração Comercial", desc:"Conservação em escala.", leaves:["Freezers horizontais","Expositores refrigerados","Câmaras frias","Balcões frigoríficos"]}
+]},
+{name:"Informática", icon:"bi-laptop", id:"MLB1648", group:"tech", subs:[
+ {name:"Notebooks", desc:"Computação portátil.", leaves:["Notebooks para trabalho","Notebooks gamer","Ultrabooks","Notebooks 2 em 1"]},
+ {name:"Desktops", desc:"Computadores de mesa.", leaves:["Computadores completos","All-in-one","Mini PCs","PCs montados"]},
+ {name:"Componentes", desc:"Peças internas do PC.", leaves:["Placas-mãe","Processadores","Memórias RAM","Placas de vídeo"]},
+ {name:"Armazenamento", desc:"Guarda de arquivos digitais.", leaves:["SSDs internos","HDs externos","Pen drives","Cartões de memória"]},
+ {name:"Periféricos", desc:"Interação com o computador.", leaves:["Teclados","Mouses","Monitores","Webcams"]},
+ {name:"Redes", desc:"Conectividade doméstica e corporativa.", leaves:["Roteadores","Switches","Cabos de rede","Repetidores Wi-Fi"]},
+ {name:"Impressoras", desc:"Impressão doméstica e profissional.", leaves:["Impressoras a laser","Impressoras jato de tinta","Multifuncionais","Impressoras fotográficas"]},
+ {name:"Software", desc:"Licenças e programas.", leaves:["Licenças Windows","Antivírus","Pacotes Office","Softwares de design"]}
+]},
+{name:"Instrumentos Musicais", icon:"bi-music-note-beamed", id:"MLB-INSTR", group:"lazer", subs:[
+ {name:"Cordas", desc:"Instrumentos de corda.", leaves:["Violões","Guitarras","Baixos elétricos","Ukuleles"]},
+ {name:"Teclas", desc:"Instrumentos de teclado.", leaves:["Teclados musicais","Pianos digitais","Sintetizadores","Órgãos eletrônicos"]},
+ {name:"Percussão", desc:"Ritmo e batida.", leaves:["Baterias acústicas","Baterias eletrônicas","Cajóns","Pandeiros"]},
+ {name:"Sopro", desc:"Instrumentos de sopro.", leaves:["Saxofones","Flautas","Trompetes","Clarinetes"]},
+ {name:"Amplificadores", desc:"Amplificação de som ao vivo.", leaves:["Amplificadores de guitarra","Amplificadores de baixo","Caixas de retorno","Pedaleiras"]},
+ {name:"Estúdio", desc:"Gravação caseira e profissional.", leaves:["Interfaces de áudio","Microfones condensadores","Fones de estúdio","Placas de som"]},
+ {name:"Acessórios Musicais", desc:"Complementos para instrumentos.", leaves:["Palhetas","Cordas avulsas","Capas para instrumentos","Suportes para instrumentos"]},
+ {name:"DJ e Produção", desc:"Mixagem e performance eletrônica.", leaves:["Mesas de som","Controladoras DJ","Fones para DJ","Softwares de produção"]}
+]},
+{name:"Joias e Relógios", icon:"bi-gem", id:"MLB-JOIAS", group:"moda", subs:[
+ {name:"Joias em Ouro", desc:"Peças em ouro maciço.", leaves:["Anéis de ouro","Colares de ouro","Brincos de ouro","Pulseiras de ouro"]},
+ {name:"Joias em Prata", desc:"Peças em prata legítima.", leaves:["Anéis de prata 925","Colares folheados","Brincos de prata","Pingentes"]},
+ {name:"Relógios de Luxo", desc:"Relojoaria de alto padrão.", leaves:["Relógios automáticos","Relógios suíços","Relógios de marca","Relógios em aço inoxidável"]},
+ {name:"Relógios Digitais", desc:"Uso esportivo e tecnológico.", leaves:["Relógios esportivos","Smartwatches","Relógios com GPS","Relógios à prova d'água"]},
+ {name:"Bijuterias", desc:"Acessórios fashion do dia a dia.", leaves:["Colares fashion","Brincos statement","Pulseiras da moda","Conjuntos de bijuteria"]},
+ {name:"Alianças", desc:"Símbolo de compromisso.", leaves:["Alianças de casamento","Alianças de noivado","Alianças em ouro","Alianças anatômicas"]},
+ {name:"Pedras Preciosas", desc:"Gemas soltas para joalheria.", leaves:["Diamantes soltos","Esmeraldas","Safiras","Pedras semipreciosas"]},
+ {name:"Acessórios para Joias", desc:"Guarda e cuidado das peças.", leaves:["Caixas organizadoras","Estojos de veludo","Suportes para colares","Kits de limpeza"]}
+]},
+{name:"Livros, Revistas e Comics", icon:"bi-book", id:"MLB1196", group:"lazer", subs:[
+ {name:"Literatura", desc:"Ficção e não-ficção geral.", leaves:["Romances","Ficção científica","Poesia","Contos"]},
+ {name:"Livros Didáticos", desc:"Uso educacional.", leaves:["Livros escolares","Apostilas","Livros universitários","Dicionários"]},
+ {name:"HQs e Mangás", desc:"Narrativa em quadrinhos.", leaves:["Quadrinhos nacionais","Mangás importados","Graphic novels","Edições especiais de HQ"]},
+ {name:"Revistas", desc:"Publicações periódicas.", leaves:["Revistas de moda","Revistas em quadrinhos","Revistas técnicas","Coleções de revistas"]},
+ {name:"Livros Técnicos", desc:"Referência profissional.", leaves:["Livros de programação","Livros de engenharia","Livros de medicina","Livros de direito"]},
+ {name:"Livros Infantis", desc:"Leitura para crianças.", leaves:["Livros ilustrados","Livros interativos","Contos infantis","Livros educativos"]},
+ {name:"E-readers", desc:"Leitura digital.", leaves:["Kindle","Capas para e-reader","Leitores digitais","Acessórios para Kindle"]},
+ {name:"Livros Usados e Raros", desc:"Sebos e itens de colecionador.", leaves:["Primeiras edições","Livros de sebo","Edições esgotadas","Livros autografados"]}
+]},
+{name:"Música, Filmes e Seriados", icon:"bi-film", id:"MLB-MUSFILM", group:"lazer", subs:[
+ {name:"CDs", desc:"Álbuns em mídia física.", leaves:["Álbuns de pop","Álbuns de rock","Álbuns de MPB","Coletâneas"]},
+ {name:"Vinis", desc:"Formato analógico de coleção.", leaves:["LPs novos","Vinis usados","Edições especiais em vinil","Compactos"]},
+ {name:"DVDs e Blu-rays", desc:"Filmes e séries em mídia física.", leaves:["Filmes em DVD","Séries em Blu-ray","Documentários","Filmes clássicos"]},
+ {name:"Box Sets", desc:"Coleções completas.", leaves:["Séries completas","Box de trilogias","Edições de colecionador","Box sets de animes"]},
+ {name:"Trilhas Sonoras", desc:"Música de filmes e jogos.", leaves:["Trilhas de filmes","Trilhas de games","Álbuns instrumentais","Discos de musicais"]},
+ {name:"Itens de Colecionador", desc:"Memorabilia de entretenimento.", leaves:["Pôsteres de filmes","Action figures de personagens","Réplicas de props","Autógrafos"]},
+ {name:"Karaokê", desc:"Diversão musical em casa.", leaves:["Microfones de karaokê","Máquinas de karaokê","CDs de karaokê","Caixas de som para karaokê"]},
+ {name:"Ingressos para Shows", desc:"Acesso a eventos ao vivo.", leaves:["Ingressos de shows","Ingressos de festivais","Meia-entrada estudantil","Ingressos VIP"]}
+]},
+{name:"Saúde", icon:"bi-heart-pulse", id:"MLB-SAUDE", group:"casa", subs:[
+ {name:"Equipamentos Médicos", desc:"Monitoramento em casa.", leaves:["Aparelhos de pressão","Termômetros digitais","Oxímetros","Nebulizadores"]},
+ {name:"Mobilidade", desc:"Auxílio para locomoção.", leaves:["Cadeiras de rodas","Andadores","Muletas","Bengalas"]},
+ {name:"Ortopedia", desc:"Suporte músculo-esquelético.", leaves:["Órteses","Palmilhas ortopédicas","Joelheiras","Tornozeleiras"]},
+ {name:"Fisioterapia", desc:"Recuperação e reabilitação.", leaves:["Aparelhos de eletroestimulação","Bolas de pilates","Faixas elásticas","Rolos de liberação miofascial"]},
+ {name:"Bem-estar", desc:"Relaxamento e alívio de dores.", leaves:["Massageadores","Almofadas terapêuticas","Compressas térmicas","Difusores de aromaterapia"]},
+ {name:"Primeiros Socorros", desc:"Emergências do dia a dia.", leaves:["Kits de emergência","Curativos","Ataduras","Antissépticos"]},
+ {name:"Óculos e Lentes", desc:"Correção e proteção visual.", leaves:["Óculos de grau","Lentes de contato","Óculos de leitura","Estojos para óculos"]},
+ {name:"Higiene Hospitalar", desc:"Proteção e assepsia.", leaves:["Luvas descartáveis","Máscaras cirúrgicas","Álcool em gel","Aventais descartáveis"]}
+]},
+{name:"Serviços", icon:"bi-briefcase", id:"MLB1540", group:"outros", subs:[
+ {name:"Serviços Digitais", desc:"Soluções online.", leaves:["Assinaturas de streaming","Cursos online","Hospedagem de sites","Design gráfico digital"]},
+ {name:"Serviços Profissionais", desc:"Apoio especializado.", leaves:["Consultorias","Contabilidade","Assessoria jurídica","Tradução"]},
+ {name:"Aulas Particulares", desc:"Educação individualizada.", leaves:["Aulas de idiomas","Reforço escolar","Aulas de música","Preparação para provas"]},
+ {name:"Eventos", desc:"Organização de celebrações.", leaves:["Buffet para eventos","Fotografia de eventos","Decoração de eventos","DJs para festas"]},
+ {name:"Manutenção e Reparos", desc:"Serviços residenciais.", leaves:["Encanador","Serviços elétricos","Montagem de móveis","Reparos domésticos"]},
+ {name:"Serviços Automotivos", desc:"Cuidados com o veículo.", leaves:["Revisão automotiva","Funilaria e pintura","Troca de óleo","Alinhamento e balanceamento"]},
+ {name:"Assinaturas e Planos", desc:"Acesso recorrente a serviços.", leaves:["Planos de streaming","Licenças de software","Assinaturas de revistas","Planos de internet"]},
+ {name:"Consultoria Empresarial", desc:"Estratégia para negócios.", leaves:["Gestão empresarial","Consultoria financeira","Marketing digital","Planejamento estratégico"]}
+]},
+{name:"Outras Categorias", icon:"bi-three-dots", id:"OUTROS", group:"outros", subs:[
+ {name:"Diversos / Não Classificados", desc:"Itens em processo de reclassificação.", leaves:["Itens diversos","Produtos em recategorização","Categorias temporárias"]}
+]}
+];
+
+/* ===================== HELPERS ===================== */
+function slug(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-');}
+function groupOf(id){return GROUPS.find(g=>g.id===id);}
+
+/* stats */
+let totalSubs=0, totalLeaves=0;
+DATA.forEach(c=>{totalSubs+=c.subs.length; c.subs.forEach(s=>totalLeaves+=s.leaves.length);});
+document.getElementById('statCats').textContent = DATA.length;
+document.getElementById('statSubs').textContent = totalSubs;
+document.getElementById('statLeaves').textContent = totalLeaves+'+';
+
+/* ===================== RENDER: GROUP FILTERS ===================== */
+const groupFilters = document.getElementById('groupFilters');
+let activeGroup = 'all';
+function renderGroupFilters(){
+  const allBtn = `<button class="gf-btn active" data-g="all" style="border-color:var(--dark);background:var(--dark);color:#fff;"><span class="dot" style="background:var(--yellow)"></span>Todas</button>`;
+  const btns = GROUPS.map(g=>`<button class="gf-btn" data-g="${g.id}"><span class="dot" style="background:${g.color}"></span>${g.name}</button>`).join('');
+  groupFilters.innerHTML = allBtn + btns;
+  groupFilters.querySelectorAll('.gf-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      activeGroup = btn.dataset.g;
+      groupFilters.querySelectorAll('.gf-btn').forEach(b=>{
+        b.classList.remove('active');
+        b.style.background=''; b.style.borderColor=''; b.style.color='';
+      });
+      btn.classList.add('active');
+      if(btn.dataset.g==='all'){btn.style.background='var(--dark)'; btn.style.color='#fff'; btn.style.borderColor='var(--dark)';}
+      else{const g=groupOf(btn.dataset.g); btn.style.background=g.color; btn.style.color='#fff'; btn.style.borderColor=g.color;}
+      applyFilters();
+    });
+  });
+}
+renderGroupFilters();
+
+/* ===================== RENDER: SIDEBAR + MAIN ===================== */
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.getElementById('mainContent');
+
+function render(){
+  let sbHtml = '';
+  let mainHtml = '';
+
+  GROUPS.forEach(g=>{
+    const cats = DATA.filter(c=>c.group===g.id);
+    if(cats.length===0) return;
+
+    sbHtml += `<div class="sb-group">
+      <div class="sb-group-head"><span class="dot" style="background:${g.color}"></span>${g.name}</div>
+      ${cats.map(c=>`<a class="sb-cat-link" href="#${slug(c.name)}" data-cat="${slug(c.name)}"><i class="bi ${c.icon} me-1"></i>${c.name}</a>`).join('')}
+    </div>`;
+
+    mainHtml += `<section class="group-section" id="section-${g.id}" data-group="${g.id}">
+      <div class="group-banner" style="background:${g.bg};">
+        <i class="bi ${g.icon}" style="color:${g.color}"></i>
+        <div>
+          <p class="group-title" style="color:${g.color}">${g.name}</p>
+          <p class="group-sub">${cats.length} categorias · ${cats.reduce((a,c)=>a+c.subs.length,0)} subcategorias</p>
+        </div>
+      </div>
+      ${cats.map(c=>renderCatCard(c,g)).join('')}
+    </section>`;
+  });
+
+  sidebar.innerHTML = sbHtml;
+  mainContent.innerHTML = mainHtml;
+
+  document.querySelectorAll('.cat-header').forEach(h=>{
+    h.addEventListener('click',()=>{
+      const body = document.getElementById(h.dataset.target);
+      const expanded = h.getAttribute('aria-expanded')==='true';
+      h.setAttribute('aria-expanded', String(!expanded));
+      body.classList.toggle('hidden');
+    });
+  });
+}
+
+function renderCatCard(c,g){
+  const cid = slug(c.name);
+  return `<div class="cat-card" id="${cid}" data-cat-index="${DATA.indexOf(c)}" data-group="${g.id}">
+    <div class="cat-header" role="button" aria-expanded="false" data-target="body-${cid}">
+      <div class="cat-icon" style="background:${g.bg};color:${g.color};"><i class="bi ${c.icon}"></i></div>
+      <div>
+        <p class="cat-title">${c.name}</p>
+        <span class="cat-meta">${c.subs.length} subcategorias &nbsp;·&nbsp; <span class="cat-id">${c.id}</span></span>
+      </div>
+      <i class="bi bi-chevron-down chevron"></i>
+    </div>
+    <div class="subcats hidden" id="body-${cid}">
+      ${c.subs.map(s=>`
+        <div class="sub-card" data-search="${(s.name+' '+s.desc+' '+s.leaves.join(' ')).toLowerCase()}">
+          <h4>${s.name}</h4>
+          <p>${s.desc}</p>
+          <div class="leaf-tags">${s.leaves.map(l=>`<span class="leaf-tag">${l}</span>`).join('')}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+render();
+
+/* ===================== SEARCH + GROUP FILTER ===================== */
+const input = document.getElementById('searchInput');
+const noResults = document.getElementById('noResults');
+const resultCount = document.getElementById('resultCount');
+
+function applyFilters(){
+  const q = input.value.trim().toLowerCase();
+  let visibleCats=0, visibleSubs=0;
+
+  document.querySelectorAll('.group-section').forEach(sec=>{
+    const groupMatches = activeGroup==='all' || sec.dataset.group===activeGroup;
+    let anyCatVisibleInGroup=false;
+
+    sec.querySelectorAll('.cat-card').forEach(card=>{
+      const ci = card.dataset.catIndex;
+      const catData = DATA[ci];
+      const header = card.querySelector('.cat-header');
+      const body = document.getElementById(header.dataset.target);
+      const catNameMatch = q==='' ? true : catData.name.toLowerCase().includes(q);
+      let anySubVisible=false;
+
+      card.querySelectorAll('.sub-card').forEach(sc=>{
+        const match = q==='' || sc.dataset.search.includes(q) || catNameMatch;
+        sc.classList.toggle('hidden', !match);
+        if(match){anySubVisible=true; visibleSubs++;}
+      });
+
+      const showCard = groupMatches && (q==='' ? true : (catNameMatch || anySubVisible));
+      card.classList.toggle('hidden', !showCard);
+      if(showCard){visibleCats++; anyCatVisibleInGroup=true;}
+
+      if(q!=='' && showCard){
+        header.setAttribute('aria-expanded','true');
+        body.classList.remove('hidden');
+      } else if(q===''){
+        header.setAttribute('aria-expanded','false');
+        body.classList.add('hidden');
+      }
+    });
+
+    sec.classList.toggle('hidden', !(groupMatches && anyCatVisibleInGroup));
+  });
+
+  noResults.classList.toggle('hidden', visibleCats!==0);
+  resultCount.textContent = (q==='' && activeGroup==='all') ? '' : `${visibleCats} categorias · ${visibleSubs} subcategorias`;
+}
+input.addEventListener('input', applyFilters);
+
+/* ===================== EXPAND / COLLAPSE / VIEW TOGGLE ===================== */
+document.getElementById('expandAllBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.cat-header').forEach(h=>{
+    h.setAttribute('aria-expanded','true');
+    document.getElementById(h.dataset.target).classList.remove('hidden');
+  });
+});
+document.getElementById('collapseAllBtn').addEventListener('click',()=>{
+  document.querySelectorAll('.cat-header').forEach(h=>{
+    h.setAttribute('aria-expanded','false');
+    document.getElementById(h.dataset.target).classList.add('hidden');
+  });
+});
+let listView=false;
+document.getElementById('viewToggleBtn').addEventListener('click',(e)=>{
+  listView=!listView;
+  document.querySelectorAll('.subcats').forEach(el=>el.classList.toggle('list-view',listView));
+  document.getElementById('viewToggleLabel').textContent = listView ? 'Ver em grade' : 'Ver em lista';
+  e.currentTarget.querySelector('i').className = listView ? 'bi bi-grid-3x3-gap' : 'bi bi-list-ul';
+});
+
+/* ===================== SCROLLSPY ===================== */
+const sbLinks = () => document.querySelectorAll('.sb-cat-link');
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const id = entry.target.id;
+      sbLinks().forEach(l=>l.classList.toggle('active', l.dataset.cat===id));
+    }
+  });
+},{rootMargin:"-15% 0px -70% 0px"});
+document.querySelectorAll('.cat-card').forEach(c=>observer.observe(c));
+
+/* ===================== BACK TO TOP ===================== */
+const backTop = document.getElementById('backTop');
+window.addEventListener('scroll',()=>{backTop.classList.toggle('show', window.scrollY>500);});
+</script>
+</body>
+</html>
